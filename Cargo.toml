@@ -1,0 +1,20 @@
+[package]
+name = "escalon-jobs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "escalon_jobs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "escalon-jobs"
+path = "src/main.rs"
+
+[dependencies]
+async-trait = "0.1.73"
+chrono = "0.4.29"
+escalon = "0.1.1"
+tokio = { version = "1.32.0", features = ["full"] }
+tokio-cron-scheduler = "*"
+uuid = { version = "1.4.1", features = ["v4"] }
