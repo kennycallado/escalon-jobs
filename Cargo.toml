@@ -1,7 +1,12 @@
 [package]
-name = "escalon-jobs"
-version = "0.1.0"
+authors = ["kennycallado <kennycallado@hotmail.com>"]
+description = "Simple way to scale your application with jobs"
 edition = "2021"
+license = "MIT"
+name = "escalon-jobs"
+readme = "README.md"
+repository = "https://github.com/kennycallado/escalon-jobs"
+version = "0.1.0"
 
 [lib]
 name = "escalon_jobs"
