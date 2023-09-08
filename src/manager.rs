@@ -15,9 +15,9 @@ pub struct NoPort;
 pub struct Port(u16);
 
 pub struct EscalonJobsManagerBuilder<I, A, P> {
-    pub id: I,
-    pub addr: A,
-    pub port: P,
+    id: I,
+    addr: A,
+    port: P,
 }
 
 impl<I, A, P> EscalonJobsManagerBuilder<I, A, P> {
