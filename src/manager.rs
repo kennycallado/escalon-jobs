@@ -110,7 +110,7 @@ impl EscalonJobsManager {
 
         let jobs = self.jobs.clone();
 
-        let job = SchedulerJob::new_async(
+        let job = Job::new_async(
             new_job.into().schedule.clone().as_str(),
             move |uuid, lock| {
                 let jobs = jobs.clone();
