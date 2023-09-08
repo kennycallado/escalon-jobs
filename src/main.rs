@@ -8,9 +8,9 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob};
-use manager::JobManager;
-use tokio_cron_scheduler::JobScheduler;
+use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, JobScheduler};
+use manager::EscalonJobsManager;
+use tokio::signal::unix::{signal, SignalKind};
 use uuid::Uuid;
 
 pub struct AppJob {
@@ -103,7 +103,7 @@ async fn main() {
     };
 
     // start service
-    let jm = JobManager::new();
+    let jm = EscalonJobsManager::new();
     let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
 
     jm.init().await;
