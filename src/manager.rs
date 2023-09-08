@@ -96,7 +96,8 @@ impl EscalonJobsManager {
             .set_port(self.port.0)
             .set_count(move || jobs.lock().unwrap().len())
             .build()
-            .await.unwrap();
+            .await
+            .unwrap();
 
         udp_server.listen().await.unwrap()
     }
@@ -110,9 +111,8 @@ impl EscalonJobsManager {
 
         let jobs = self.jobs.clone();
 
-        let job = Job::new_async(
-            new_job.into().schedule.clone().as_str(),
-            move |uuid, lock| {
+        let job =
+            Job::new_async(new_job.into().schedule.clone().as_str(), move |uuid, lock| {
                 let jobs = jobs.clone();
                 let new_cron_job = new_cron_job.clone();
 
@@ -148,9 +148,8 @@ impl EscalonJobsManager {
                         _ => {}
                     }
                 })
-            },
-        )
-        .unwrap();
+            })
+            .unwrap();
 
         let scheduler;
         {

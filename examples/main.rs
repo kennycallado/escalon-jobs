@@ -6,8 +6,8 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, JobScheduler};
 use escalon_jobs::manager::EscalonJobsManager;
+use escalon_jobs::{EscalonJob, EscalonJobTrait, JobScheduler, NewEscalonJob};
 use tokio::signal::unix::{signal, SignalKind};
 use uuid::Uuid;
 
@@ -37,7 +37,6 @@ impl From<NewAppJob> for NewEscalonJob {
         }
     }
 }
-
 
 #[async_trait]
 impl EscalonJobTrait for NewAppJob {
