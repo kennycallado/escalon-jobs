@@ -1,5 +1,3 @@
-mod manager;
-
 use std::{
     net::IpAddr,
     sync::{Arc, Mutex},
@@ -9,7 +7,7 @@ use std::{
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, JobScheduler};
-use manager::EscalonJobsManager;
+use escalon_jobs::manager::EscalonJobsManager;
 use tokio::signal::unix::{signal, SignalKind};
 use uuid::Uuid;
 
