@@ -68,7 +68,7 @@ impl EscalonJobTrait for NewAppJob {
         self.update_db(job).await;
     }
 
-    async fn update_db(&self, job: EscalonJob) {
+    async fn update_db(&self, job: &EscalonJob) {
         tokio::time::sleep(Duration::from_secs(1)).await;
         println!("Job: {:?} - updating to db", job);
     }
