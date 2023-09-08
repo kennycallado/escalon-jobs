@@ -5,34 +5,48 @@ use tokio_cron_scheduler::{Job as SchedulerJob, JobScheduler};
 
 use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
 
+pub struct NoId;
+pub struct Id(String);
+
 pub struct NoAddr;
 pub struct Addr(IpAddr);
 
 pub struct NoPort;
 pub struct Port(u16);
 
-pub struct JobManagerBuilder<A, P> {
+pub struct JobManagerBuilder<I, A, P> {
+    pub id: I,
     pub addr: A,
     pub port: P,
 }
 
-impl<A, P> JobManagerBuilder<A, P> {
-    pub fn set_addr(self, addr: IpAddr) -> JobManagerBuilder<Addr, P> {
+impl<I, A, P> JobManagerBuilder<I, A, P> {
+    pub fn set_id(self, id: String) -> JobManagerBuilder<Id, A, P> {
         JobManagerBuilder {
+            id: Id(id),
+            addr: self.addr,
+            port: self.port,
+        }
+    }
+
+    pub fn set_addr(self, addr: IpAddr) -> JobManagerBuilder<I, Addr, P> {
+        JobManagerBuilder {
+            id: self.id,
             addr: Addr(addr),
             port: self.port,
         }
     }
 
-    pub fn set_port(self, port: u16) -> JobManagerBuilder<A, Port> {
+    pub fn set_port(self, port: u16) -> JobManagerBuilder<I, A, Port> {
         JobManagerBuilder {
+            id: self.id,
             addr: self.addr,
             port: Port(port),
         }
     }
 }
 
-impl JobManagerBuilder<Addr, Port> {
+impl JobManagerBuilder<Id, Addr, Port> {
     pub async fn build(self) -> JobManager {
         let scheduler = JobScheduler::new().await.unwrap();
         let jobs = Arc::new(Mutex::new(Vec::new()));
@@ -42,6 +56,7 @@ impl JobManagerBuilder<Addr, Port> {
         JobManager {
             scheduler: Arc::new(Mutex::new(scheduler)),
             jobs,
+            id: self.id,
             addr: self.addr,
             port: self.port,
         }
@@ -51,14 +66,16 @@ impl JobManagerBuilder<Addr, Port> {
 pub struct JobManager {
     scheduler: Arc<Mutex<JobScheduler>>,
     jobs: Arc<Mutex<Vec<EscalonJob>>>,
+    id: Id,
     addr: Addr,
     port: Port,
 }
 
 impl JobManager {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> JobManagerBuilder<NoAddr, NoPort> {
+    pub fn new() -> JobManagerBuilder<NoId, NoAddr, NoPort> {
         JobManagerBuilder {
+            id: NoId,
             addr: NoAddr,
             port: NoPort,
         }
@@ -80,6 +97,7 @@ impl JobManager {
         let jobs = self.jobs.clone();
 
         let mut udp_server = Escalon::new()
+            .set_id(&self.id.0)
             .set_addr(self.addr.0)
             .set_port(self.port.0)
             .set_count(move || jobs.lock().unwrap().len())

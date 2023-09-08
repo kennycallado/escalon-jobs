@@ -83,6 +83,7 @@ async fn main() {
     let addr =
         std::env::var("ADDR").unwrap_or("0.0.0.0".to_string()).parse::<IpAddr>().unwrap();
     let port = std::env::var("PORT").unwrap_or("65056".to_string()).parse::<u16>().unwrap();
+    let iden = std::env::var("HOSTNAME").unwrap_or("server".to_string());
     // config
 
     let new_app_job_1 = NewAppJob {
@@ -103,7 +104,7 @@ async fn main() {
 
     // start service
     let jm = JobManager::new();
-    let jm = jm.set_addr(addr).set_port(port).build().await;
+    let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
 
     jm.init().await;
     // end service
