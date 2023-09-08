@@ -1,7 +1,7 @@
 use escalon::Escalon;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
-use tokio_cron_scheduler::{Job as SchedulerJob, JobScheduler};
+use tokio_cron_scheduler::{Job, JobScheduler};
 
 use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
 
