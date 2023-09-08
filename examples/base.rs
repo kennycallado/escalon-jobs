@@ -40,12 +40,8 @@ impl From<NewAppJob> for NewEscalonJob {
 
 #[async_trait]
 impl EscalonJobTrait for NewAppJob {
-    async fn run(
-        &self,
-        job_id: &Uuid,
-        _lock: &JobScheduler,
-        jobs: Arc<Mutex<Vec<EscalonJob>>>,
-    ) {
+    async fn run(&self, job: EscalonJob) {
+        println!("Job {} started", job.job_id);
         // let next_tick = lock.next_tick_for_job(job_id.clone()).await.unwrap().unwrap().naive_utc();
 
         let _status =

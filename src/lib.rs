@@ -17,7 +17,7 @@ pub struct EscalonJob {
 
 #[async_trait]
 pub trait EscalonJobTrait {
-    async fn run(&self, job_id: &Uuid, lock: &JobScheduler, jobs: Arc<Mutex<Vec<EscalonJob>>>);
+    async fn run(&self, job: EscalonJob);
     async fn update_db(&self, job: &EscalonJob);
 }
 

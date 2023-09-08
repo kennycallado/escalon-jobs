@@ -140,7 +140,8 @@ impl EscalonJobsManager {
                                 .status = String::from("active");
                         }
                         "active" => {
-                            new_cron_job.run(&uuid, &lock, jobs).await;
+                            let job = jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().clone();
+                            new_cron_job.run(job).await;
                         }
                         "done" => {
                             lock.remove(&uuid).await.unwrap();
