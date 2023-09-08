@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use std::sync::{Arc, Mutex};
-use tokio_cron_scheduler::JobScheduler;
+pub use tokio_cron_scheduler::JobScheduler;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
