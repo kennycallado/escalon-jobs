@@ -1,3 +1,5 @@
+pub mod manager;
+
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use std::sync::{Arc, Mutex};
