@@ -114,5 +114,13 @@ async fn main() {
     jm.create_job(new_app_job_2).await;
     // call from handlers
 
-    tokio::time::sleep(Duration::from_secs(60)).await;
+    // temp just to keep the server running
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
+
+    signal(SignalKind::terminate()).unwrap().recv().await;
+    println!("Shutting down the server");
 }
