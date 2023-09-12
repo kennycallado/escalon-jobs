@@ -2,8 +2,7 @@ pub mod manager;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use std::sync::{Arc, Mutex};
-pub use tokio_cron_scheduler::JobScheduler;
+use manager::Context;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -16,8 +15,8 @@ pub struct EscalonJob {
 }
 
 #[async_trait]
-pub trait EscalonJobTrait {
-    async fn run(&self, job: EscalonJob);
+pub trait EscalonJobTrait<T> {
+    async fn run(&self, ctx: Context<T>, job: EscalonJob);
     async fn update_db(&self, job: &EscalonJob);
 }
 

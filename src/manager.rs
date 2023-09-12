@@ -14,40 +14,60 @@ pub struct Addr(IpAddr);
 pub struct NoPort;
 pub struct Port(u16);
 
-pub struct EscalonJobsManagerBuilder<I, A, P> {
+pub struct NoContext;
+#[derive(Clone)]
+pub struct Context<T>(pub Arc<Mutex<T>>);
+
+pub struct EscalonJobsManagerBuilder<I, A, P, T> {
     id: I,
     addr: A,
     port: P,
+    context: T,
 }
 
-impl<I, A, P> EscalonJobsManagerBuilder<I, A, P> {
-    pub fn set_id(self, id: String) -> EscalonJobsManagerBuilder<Id, A, P> {
+impl<I, A, P, T> EscalonJobsManagerBuilder<I, A, P, T> {
+    pub fn set_id(self, id: String) -> EscalonJobsManagerBuilder<Id, A, P, T> {
         EscalonJobsManagerBuilder {
             id: Id(id),
             addr: self.addr,
             port: self.port,
+            context: self.context,
         }
     }
 
-    pub fn set_addr(self, addr: IpAddr) -> EscalonJobsManagerBuilder<I, Addr, P> {
+    pub fn set_addr(self, addr: IpAddr) -> EscalonJobsManagerBuilder<I, Addr, P, T> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: Addr(addr),
             port: self.port,
+            context: self.context,
         }
     }
 
-    pub fn set_port(self, port: u16) -> EscalonJobsManagerBuilder<I, A, Port> {
+    pub fn set_port(self, port: u16) -> EscalonJobsManagerBuilder<I, A, Port, T> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: self.addr,
             port: Port(port),
+            context: self.context,
+        }
+    }
+
+    pub fn set_context(self, context: T) -> EscalonJobsManagerBuilder<I, A, P, Context<T>>
+    where
+        T: Clone + Send + Sync + 'static,
+    {
+        EscalonJobsManagerBuilder {
+            id: self.id,
+            addr: self.addr,
+            port: self.port,
+            context: Context( Arc::new(Mutex::new(context)) ),
         }
     }
 }
 
-impl EscalonJobsManagerBuilder<Id, Addr, Port> {
-    pub async fn build(self) -> EscalonJobsManager {
+impl<T> EscalonJobsManagerBuilder<Id, Addr, Port, Context<T>> {
+    pub async fn build(self) -> EscalonJobsManager<T> {
         let scheduler = JobScheduler::new().await.unwrap();
         let jobs = Arc::new(Mutex::new(Vec::new()));
 
@@ -56,6 +76,7 @@ impl EscalonJobsManagerBuilder<Id, Addr, Port> {
         EscalonJobsManager {
             scheduler: Arc::new(Mutex::new(scheduler)),
             jobs,
+            context: self.context,
             id: self.id,
             addr: self.addr,
             port: self.port,
@@ -63,21 +84,24 @@ impl EscalonJobsManagerBuilder<Id, Addr, Port> {
     }
 }
 
-pub struct EscalonJobsManager {
+pub struct EscalonJobsManager<T> {
     scheduler: Arc<Mutex<JobScheduler>>,
     jobs: Arc<Mutex<Vec<EscalonJob>>>,
+    context: Context<T>,
     id: Id,
     addr: Addr,
     port: Port,
 }
 
-impl EscalonJobsManager {
+impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort> {
+    pub fn new() -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Option<T>>
+    {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
             port: NoPort,
+            context: None,
         }
     }
 
@@ -104,10 +128,11 @@ impl EscalonJobsManager {
 
     pub async fn create_job(
         &self,
-        new_cron_job: impl EscalonJobTrait + Into<NewEscalonJob> + Clone + Send + Sync + 'static,
+        new_cron_job: impl EscalonJobTrait<T> + Into<NewEscalonJob> + Clone + Send + Sync + 'static,
     ) -> EscalonJob {
         let new_job = new_cron_job.clone();
         let cloned = new_cron_job.clone().into();
+        let ctx = self.context.clone();
 
         let jobs = self.jobs.clone();
 
@@ -115,6 +140,7 @@ impl EscalonJobsManager {
             Job::new_async(new_job.into().schedule.clone().as_str(), move |uuid, lock| {
                 let jobs = jobs.clone();
                 let new_cron_job = new_cron_job.clone();
+                let ctx = ctx.clone();
 
                 Box::pin(async move {
                     // while the status is pending not run the job
@@ -141,7 +167,7 @@ impl EscalonJobsManager {
                         }
                         "active" => {
                             let job = jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().clone();
-                            new_cron_job.run(job).await;
+                            new_cron_job.run(ctx, job).await;
                         }
                         "done" => {
                             lock.remove(&uuid).await.unwrap();
