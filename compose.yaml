@@ -2,14 +2,13 @@ version: "3.1"
 
 services:
   cron-1:
-    image: debian:latest
+    image: debian:stable-slim
     environment:
-      # ADDR: "0.0.0.0"
       ADDR: "0.0.0.0"
       PORT: "65056"
       RUST_BACKTRACE: 1
     volumes:
-      - ./target/release/escalon-jobs:/usr/bin/escalon-jobs
+      - ./target/release/examples/base:/usr/bin/escalon-jobs
     command: [ "escalon-jobs" ]
     deploy:
-      replicas: 12
+      replicas: 4
