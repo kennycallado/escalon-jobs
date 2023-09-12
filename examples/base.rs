@@ -1,15 +1,14 @@
 use std::{
     net::IpAddr,
-    sync::{Arc, Mutex},
     time::Duration,
 };
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::manager::EscalonJobsManager;
-use escalon_jobs::{EscalonJob, EscalonJobTrait, JobScheduler, NewEscalonJob};
+use escalon_jobs::manager::{EscalonJobsManager, Context};
+use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob};
+use reqwest::Client;
 use tokio::signal::unix::{signal, SignalKind};
-use uuid::Uuid;
 
 pub struct AppJob {
     pub id: usize,
@@ -39,29 +38,17 @@ impl From<NewAppJob> for NewEscalonJob {
 }
 
 #[async_trait]
-impl EscalonJobTrait for NewAppJob {
-    async fn run(&self, job: EscalonJob) {
-        println!("Job {} started", job.job_id);
-        // let next_tick = lock.next_tick_for_job(job_id.clone()).await.unwrap().unwrap().naive_utc();
+impl EscalonJobTrait<Option<Client>> for NewAppJob {
+    async fn run(&self, ctx: Context<Option<Client>>, job: EscalonJob) {
+        let client = ctx.0.lock().unwrap().clone().unwrap();
 
-        let _status =
-            jobs.lock().unwrap().iter().find(|j| j.job_id == *job_id).unwrap().status.clone();
-        // println!("Job: {} - {}", job_id, status);
+        let req = client.get("https://www.google.es").send().await.unwrap();
+        match req.status() {
+            reqwest::StatusCode::OK => println!("Status: OK"),
+            _ => println!("Status: {}", req.status()),
+        }
 
-        jobs.lock().unwrap().iter_mut().find(|j| j.job_id == *job_id).unwrap().status =
-            "running".to_owned();
-        // println!("Job: {} - {}", job_id, status);
-
-        jobs.lock().unwrap().iter_mut().find(|j| j.job_id == *job_id).unwrap().status =
-            "active".to_owned();
-        // println!("Job: {} - {}", job_id, status);
-
-        // println!("Job {} started", job_id);
-        // println!("Jobs {:?}", jobs.lock().unwrap());
-        // println!("Next tick {:?}", next_tick);
-
-        let job = jobs.lock().unwrap().iter().find(|j| j.job_id == *job_id).unwrap().clone();
-        self.update_db(job).await;
+        self.update_db(&job).await;
     }
 
     async fn update_db(&self, job: &EscalonJob) {
@@ -96,8 +83,13 @@ async fn main() {
     };
 
     // start service
-    let jm = EscalonJobsManager::new();
-    let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
+    let jm = EscalonJobsManager::<Client>::new();
+    let jm = jm
+        .set_id(iden)
+        .set_addr(addr)
+        .set_port(port)
+        .set_context( Some(Client::new()) )
+        .build().await;
 
     jm.init().await;
     // end service
