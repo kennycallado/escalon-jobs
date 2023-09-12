@@ -6,9 +6,17 @@ use manager::Context;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
+pub enum EscalonJobStatus {
+    Scheduled,
+    Running,
+    Done,
+    Failed,
+}
+
+#[derive(Debug, Clone)]
 pub struct EscalonJob {
     pub job_id: Uuid,
-    pub status: String,
+    pub status: EscalonJobStatus,
     pub schedule: String,
     pub since: Option<NaiveDateTime>,
     pub until: Option<NaiveDateTime>,

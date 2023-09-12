@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
-use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
+use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob, EscalonJobStatus};
 
 pub struct NoId;
 pub struct Id(String);
@@ -143,7 +143,6 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 let ctx = ctx.clone();
 
                 Box::pin(async move {
-                    // while the status is pending not run the job
                     let status = jobs
                         .lock()
                         .unwrap()
@@ -153,26 +152,26 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                         .status
                         .clone();
 
-                    match status.as_str() {
-                        "pending" => {
+                    match status {
+                        EscalonJobStatus::Scheduled => {
                             // check things like since and until
                             // to change state to active
-                            println!("Job: {} - pending", uuid);
+                            println!("Job: {} - {:?}", uuid, status);
                             jobs.lock()
                                 .unwrap()
                                 .iter_mut()
                                 .find(|j| j.job_id == uuid)
                                 .unwrap()
-                                .status = String::from("active");
-                        }
-                        "active" => {
+                                .status = EscalonJobStatus::Running;
+
+                            let job = jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().clone();
+                            new_cron_job.update_db(&job).await;
+                        }, EscalonJobStatus::Running => {
                             let job = jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().clone();
                             new_cron_job.run(ctx, job).await;
-                        }
-                        "done" => {
+                        }, EscalonJobStatus::Done | EscalonJobStatus::Failed => {
                             lock.remove(&uuid).await.unwrap();
                         }
-                        _ => {}
                     }
                 })
             })
@@ -188,7 +187,7 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
 
         let cron_job = EscalonJob {
             job_id,
-            status: String::from("pending"),
+            status: EscalonJobStatus::Scheduled,
             schedule: cloned.schedule,
             since: cloned.since,
             until: cloned.until,
