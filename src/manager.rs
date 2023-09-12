@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
-use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob, EscalonJobStatus};
+use crate::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 
 pub struct NoId;
 pub struct Id(String);
@@ -61,7 +61,7 @@ impl<I, A, P, T> EscalonJobsManagerBuilder<I, A, P, T> {
             id: self.id,
             addr: self.addr,
             port: self.port,
-            context: Context( Arc::new(Mutex::new(context)) ),
+            context: Context(Arc::new(Mutex::new(context))),
         }
     }
 }
@@ -95,8 +95,7 @@ pub struct EscalonJobsManager<T> {
 
 impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Option<T>>
-    {
+    pub fn new() -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Option<T>> {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
@@ -164,12 +163,26 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                                 .unwrap()
                                 .status = EscalonJobStatus::Running;
 
-                            let job = jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().clone();
+                            let job = jobs
+                                .lock()
+                                .unwrap()
+                                .iter()
+                                .find(|j| j.job_id == uuid)
+                                .unwrap()
+                                .clone();
                             new_cron_job.update_db(&job).await;
-                        }, EscalonJobStatus::Running => {
-                            let job = jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().clone();
+                        }
+                        EscalonJobStatus::Running => {
+                            let job = jobs
+                                .lock()
+                                .unwrap()
+                                .iter()
+                                .find(|j| j.job_id == uuid)
+                                .unwrap()
+                                .clone();
                             new_cron_job.run(ctx, job).await;
-                        }, EscalonJobStatus::Done | EscalonJobStatus::Failed => {
+                        }
+                        EscalonJobStatus::Done | EscalonJobStatus::Failed => {
                             lock.remove(&uuid).await.unwrap();
                         }
                     }
