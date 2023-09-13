@@ -14,69 +14,47 @@ pub struct Addr(IpAddr);
 pub struct NoPort;
 pub struct Port(u16);
 
-pub struct NoContext;
-#[derive(Clone)]
-pub struct Context<T>(pub Arc<Mutex<T>>);
-
-pub struct EscalonJobsManagerBuilder<I, A, P, T> {
+pub struct EscalonJobsManagerBuilder<I, A, P> {
     id: I,
     addr: A,
     port: P,
-    context: T,
 }
 
-impl<I, A, P, T> EscalonJobsManagerBuilder<I, A, P, T> {
-    pub fn set_id(self, id: String) -> EscalonJobsManagerBuilder<Id, A, P, T> {
+impl<I, A, P> EscalonJobsManagerBuilder<I, A, P> {
+    pub fn set_id(self, id: String) -> EscalonJobsManagerBuilder<Id, A, P> {
         EscalonJobsManagerBuilder {
             id: Id(id),
             addr: self.addr,
             port: self.port,
-            context: self.context,
         }
     }
 
-    pub fn set_addr(self, addr: IpAddr) -> EscalonJobsManagerBuilder<I, Addr, P, T> {
+    pub fn set_addr(self, addr: IpAddr) -> EscalonJobsManagerBuilder<I, Addr, P> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: Addr(addr),
             port: self.port,
-            context: self.context,
         }
     }
 
-    pub fn set_port(self, port: u16) -> EscalonJobsManagerBuilder<I, A, Port, T> {
+    pub fn set_port(self, port: u16) -> EscalonJobsManagerBuilder<I, A, Port> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: self.addr,
             port: Port(port),
-            context: self.context,
-        }
-    }
-
-    pub fn set_context(self, context: T) -> EscalonJobsManagerBuilder<I, A, P, Context<T>>
-    where
-        T: Clone + Send + Sync + 'static,
-    {
-        EscalonJobsManagerBuilder {
-            id: self.id,
-            addr: self.addr,
-            port: self.port,
-            context: Context(Arc::new(Mutex::new(context))),
         }
     }
 }
 
-impl<T> EscalonJobsManagerBuilder<Id, Addr, Port, Context<T>> {
-    pub async fn build(self) -> EscalonJobsManager<T> {
+impl EscalonJobsManagerBuilder<Id, Addr, Port> {
+    pub async fn build<T>(self, context: T) -> EscalonJobsManager<T> {
         let scheduler = JobScheduler::new().await.unwrap();
         let jobs = Arc::new(Mutex::new(Vec::new()));
-
-        // scheduler.start().await.unwrap();
 
         EscalonJobsManager {
             scheduler: Arc::new(Mutex::new(scheduler)),
             jobs,
-            context: self.context,
+            context,
             id: self.id,
             addr: self.addr,
             port: self.port,
@@ -87,7 +65,7 @@ impl<T> EscalonJobsManagerBuilder<Id, Addr, Port, Context<T>> {
 pub struct EscalonJobsManager<T> {
     scheduler: Arc<Mutex<JobScheduler>>,
     jobs: Arc<Mutex<Vec<EscalonJob>>>,
-    context: Context<T>,
+    context: T,
     id: Id,
     addr: Addr,
     port: Port,
@@ -95,12 +73,11 @@ pub struct EscalonJobsManager<T> {
 
 impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Option<T>> {
+    pub fn new() -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort> {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
             port: NoPort,
-            context: None,
         }
     }
 
@@ -180,7 +157,7 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                                 .find(|j| j.job_id == uuid)
                                 .unwrap()
                                 .clone();
-                            new_cron_job.run(ctx, job).await;
+                            new_cron_job.run(ctx.clone(), job).await;
                         }
                         EscalonJobStatus::Done | EscalonJobStatus::Failed => {
                             lock.remove(&uuid).await.unwrap();

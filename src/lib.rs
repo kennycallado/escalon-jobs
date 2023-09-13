@@ -2,7 +2,6 @@ pub mod manager;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use manager::Context;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -22,9 +21,12 @@ pub struct EscalonJob {
     pub until: Option<NaiveDateTime>,
 }
 
+/// T is the context type that will be passed
+/// should be an Arc<Mutex<_>> of the context
+/// that will be used in the job
 #[async_trait]
 pub trait EscalonJobTrait<T> {
-    async fn run(&self, ctx: Context<T>, job: EscalonJob);
+    async fn run(&self, ctx: T, job: EscalonJob);
     async fn update_db(&self, job: &EscalonJob);
 }
 
