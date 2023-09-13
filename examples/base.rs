@@ -92,13 +92,6 @@ async fn main() {
     }
     // call from handlers
 
-    // temp just to keep the server running
-    // tokio::spawn(async move {
-    //     loop {
-    //         tokio::time::sleep(Duration::from_secs(1)).await;
-    //     }
-    // });
-
     signal(SignalKind::terminate()).unwrap().recv().await;
     println!("Shutting down the server");
 }

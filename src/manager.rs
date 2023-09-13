@@ -90,12 +90,11 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
 
         let jobs = self.jobs.clone();
 
-        let mut udp_server = Escalon::new()
+        let mut udp_server = Escalon::<EscalonJob>::new()
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
             .set_port(self.port.0)
-            .set_count(move || jobs.lock().unwrap().len())
-            .build()
+            .build(jobs)
             .await
             .unwrap();
 

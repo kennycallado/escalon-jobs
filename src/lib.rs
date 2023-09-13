@@ -3,16 +3,18 @@ pub mod manager;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use uuid::Uuid;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum EscalonJobStatus {
+    #[default]
     Scheduled,
     Running,
     Done,
     Failed,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct EscalonJob {
     pub job_id: Uuid,
     pub status: EscalonJobStatus,
