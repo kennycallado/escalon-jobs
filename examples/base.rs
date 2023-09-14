@@ -23,7 +23,6 @@ pub struct NewAppJob {
     pub until: Option<NaiveDateTime>,
 }
 
-// Also gives Into<_> for free
 impl From<NewAppJob> for NewEscalonJob {
     fn from(job: NewAppJob) -> Self {
         NewEscalonJob {
@@ -38,8 +37,8 @@ impl From<NewAppJob> for NewEscalonJob {
 impl EscalonJobTrait<Client> for NewAppJob {
     async fn run(&self, client: Client, mut job: EscalonJob) {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
-
         let req = client.get(url).send().await.unwrap();
+
         match req.status() {
             reqwest::StatusCode::OK => println!("{} - Status: OK", job.job_id),
             _ => {
@@ -68,12 +67,7 @@ async fn main() {
 
     // start service
     let jm = EscalonJobsManager::<Client>::new();
-    let jm = jm
-        .set_id(iden)
-        .set_addr(addr)
-        .set_port(port)
-        .build(Client::new())
-        .await;
+    let jm = jm.set_id(iden).set_addr(addr).set_port(port).build(Client::new()).await;
 
     jm.init().await;
     // end service

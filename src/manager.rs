@@ -48,8 +48,8 @@ impl<I, A, P> EscalonJobsManagerBuilder<I, A, P> {
 
 impl EscalonJobsManagerBuilder<Id, Addr, Port> {
     pub async fn build<T>(self, context: T) -> EscalonJobsManager<T> {
-        let scheduler = JobScheduler::new().await.unwrap();
         let jobs = Arc::new(Mutex::new(Vec::new()));
+        let scheduler = JobScheduler::new().await.unwrap();
 
         EscalonJobsManager {
             scheduler: Arc::new(Mutex::new(scheduler)),
@@ -82,14 +82,7 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     }
 
     pub async fn init(&self) {
-        let scheduler;
-        {
-            scheduler = self.scheduler.lock().unwrap().clone();
-        }
-        scheduler.start().await.unwrap();
-
         let jobs = self.jobs.clone();
-
         let mut udp_server = Escalon::<EscalonJob>::new()
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
@@ -98,6 +91,11 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             .await
             .unwrap();
 
+        {
+            let scheduler = self.scheduler.lock().unwrap().clone();
+            scheduler.start().await.unwrap();
+        }
+
         udp_server.listen().await.unwrap()
     }
 
@@ -105,11 +103,10 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         &self,
         new_cron_job: impl EscalonJobTrait<T> + Into<NewEscalonJob> + Clone + Send + Sync + 'static,
     ) -> EscalonJob {
-        let new_job = new_cron_job.clone();
         let cloned = new_cron_job.clone().into();
         let ctx = self.context.clone();
-
         let jobs = self.jobs.clone();
+        let new_job = new_cron_job.clone();
 
         let job =
             Job::new_async(new_job.into().schedule.clone().as_str(), move |uuid, lock| {
@@ -131,7 +128,6 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                         EscalonJobStatus::Scheduled => {
                             // check things like since and until
                             // to change state to active
-                            println!("Job: {} - {:?}", uuid, status);
                             jobs.lock()
                                 .unwrap()
                                 .iter_mut()
@@ -146,6 +142,7 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                                 .find(|j| j.job_id == uuid)
                                 .unwrap()
                                 .clone();
+
                             new_cron_job.update_db(&job).await;
                         }
                         EscalonJobStatus::Running => {
@@ -156,6 +153,7 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                                 .find(|j| j.job_id == uuid)
                                 .unwrap()
                                 .clone();
+
                             new_cron_job.run(ctx.clone(), job).await;
                         }
                         EscalonJobStatus::Done | EscalonJobStatus::Failed => {
@@ -166,13 +164,11 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             })
             .unwrap();
 
-        let scheduler;
+        let job_id;
         {
-            scheduler = self.scheduler.lock().unwrap().clone();
+            let scheduler = self.scheduler.lock().unwrap().clone();
+            job_id = scheduler.add(job).await.unwrap();
         }
-        let job_id = scheduler.add(job).await.unwrap();
-
-        // let job_id = self.scheduler.lock().unwrap().add(job).await.unwrap();
 
         let cron_job = EscalonJob {
             job_id,
