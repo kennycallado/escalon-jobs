@@ -1,4 +1,5 @@
 pub mod manager;
+pub mod actions;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
@@ -6,7 +7,7 @@ use manager::Context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub enum EscalonJobStatus {
     #[default]
     Scheduled,
@@ -15,7 +16,7 @@ pub enum EscalonJobStatus {
     Failed,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct EscalonJob {
     pub job_id: Uuid,
     pub status: EscalonJobStatus,
@@ -29,7 +30,7 @@ pub struct EscalonJob {
 /// that will be used in the job
 #[async_trait]
 pub trait EscalonJobTrait<T> {
-    async fn run(&self, job: EscalonJob, ctx: Context<T>);
+    async fn run(&self, job: EscalonJob, ctx: Context<T>) -> EscalonJob;
     async fn update_db(&self, job: &EscalonJob);
 }
 

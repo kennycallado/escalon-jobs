@@ -35,7 +35,7 @@ impl From<NewAppJob> for NewEscalonJob {
 
 #[async_trait]
 impl EscalonJobTrait<Option<()>> for NewAppJob {
-    async fn run(&self, job: EscalonJob, _context: Context<Option<()>>) {
+    async fn run(&self, job: EscalonJob, _context: Context<Option<()>>) -> EscalonJob {
         // let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
         // let req = client.unwrap().get(url).send().await.unwrap();
 
@@ -49,6 +49,8 @@ impl EscalonJobTrait<Option<()>> for NewAppJob {
         //     }
         // }
         println!("Job: {:?} - running", job);
+
+        job
     }
 
     async fn update_db(&self, job: &EscalonJob) {

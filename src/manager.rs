@@ -5,14 +5,17 @@ use tokio_cron_scheduler::{Job, JobScheduler};
 
 use crate::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 
-pub struct NoId;
+#[derive(Clone)]
 pub struct Id(String);
+pub struct NoId;
 
-pub struct NoAddr;
+#[derive(Clone)]
 pub struct Addr(IpAddr);
+pub struct NoAddr;
 
-pub struct NoPort;
+#[derive(Clone)]
 pub struct Port(u16);
+pub struct NoPort;
 
 #[derive(Clone)]
 pub struct Context<T>(pub T);
@@ -69,10 +72,11 @@ impl<C> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>> {
     }
 }
 
+#[derive(Clone)]
 pub struct EscalonJobsManager<T> {
-    scheduler: Arc<Mutex<JobScheduler>>,
-    jobs: Arc<Mutex<Vec<EscalonJob>>>,
-    context: Context<T>,
+    pub scheduler: Arc<Mutex<JobScheduler>>,
+    pub jobs: Arc<Mutex<Vec<EscalonJob>>>,
+    pub context: Context<T>,
     id: Id,
     addr: Addr,
     port: Port,
@@ -107,89 +111,5 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         }
 
         udp_server.listen().await.unwrap()
-    }
-
-    pub async fn create_job(
-        &self,
-        new_cron_job: impl EscalonJobTrait<T> + Into<NewEscalonJob> + Clone + Send + Sync + 'static,
-    ) -> EscalonJob {
-        let cloned = new_cron_job.clone().into();
-        let ctx = self.context.clone();
-        let jobs = self.jobs.clone();
-        let new_job = new_cron_job.clone();
-
-        let job =
-            Job::new_async(new_job.into().schedule.clone().as_str(), move |uuid, lock| {
-                let jobs = jobs.clone();
-                let new_cron_job = new_cron_job.clone();
-                let ctx = ctx.clone();
-
-                Box::pin(async move {
-                    let status = jobs
-                        .lock()
-                        .unwrap()
-                        .iter()
-                        .find(|j| j.job_id == uuid)
-                        .unwrap()
-                        .status
-                        .clone();
-
-                    match status {
-                        EscalonJobStatus::Scheduled => {
-                            // check things like since and until
-                            // to change state to active
-                            jobs.lock()
-                                .unwrap()
-                                .iter_mut()
-                                .find(|j| j.job_id == uuid)
-                                .unwrap()
-                                .status = EscalonJobStatus::Running;
-
-                            let job = jobs
-                                .lock()
-                                .unwrap()
-                                .iter()
-                                .find(|j| j.job_id == uuid)
-                                .unwrap()
-                                .clone();
-
-                            new_cron_job.update_db(&job).await;
-                        }
-                        EscalonJobStatus::Running => {
-                            let job = jobs
-                                .lock()
-                                .unwrap()
-                                .iter()
-                                .find(|j| j.job_id == uuid)
-                                .unwrap()
-                                .clone();
-
-                            new_cron_job.run(job, ctx.clone()).await;
-                        }
-                        EscalonJobStatus::Done | EscalonJobStatus::Failed => {
-                            lock.remove(&uuid).await.unwrap();
-                        }
-                    }
-                })
-            })
-            .unwrap();
-
-        let job_id;
-        {
-            let scheduler = self.scheduler.lock().unwrap().clone();
-            job_id = scheduler.add(job).await.unwrap();
-        }
-
-        let cron_job = EscalonJob {
-            job_id,
-            status: EscalonJobStatus::Scheduled,
-            schedule: cloned.schedule,
-            since: cloned.since,
-            until: cloned.until,
-        };
-
-        self.jobs.lock().unwrap().push(cron_job.clone());
-
-        cron_job
     }
 }
