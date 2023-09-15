@@ -2,7 +2,7 @@ use std::{net::IpAddr, time::Duration};
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::manager::EscalonJobsManager;
+use escalon_jobs::manager::{Context, EscalonJobsManager};
 use escalon_jobs::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 use reqwest::Client;
 use tokio::signal::unix::{signal, SignalKind};
@@ -34,20 +34,21 @@ impl From<NewAppJob> for NewEscalonJob {
 }
 
 #[async_trait]
-impl EscalonJobTrait<Client> for NewAppJob {
-    async fn run(&self, client: Client, mut job: EscalonJob) {
-        let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
-        let req = client.get(url).send().await.unwrap();
+impl EscalonJobTrait<Option<()>> for NewAppJob {
+    async fn run(&self, job: EscalonJob, _context: Context<Option<()>>) {
+        // let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
+        // let req = client.unwrap().get(url).send().await.unwrap();
 
-        match req.status() {
-            reqwest::StatusCode::OK => println!("{} - Status: OK", job.job_id),
-            _ => {
-                println!("{} - Status: {}", job.job_id, req.status());
+        // match req.status() {
+        //     reqwest::StatusCode::OK => println!("{} - Status: OK", job.job_id),
+        //     _ => {
+        //         println!("{} - Status: {}", job.job_id, req.status());
 
-                job.status = EscalonJobStatus::Failed;
-                self.update_db(&job).await;
-            }
-        }
+        //         job.status = EscalonJobStatus::Failed;
+        //         self.update_db(&job).await;
+        //     }
+        // }
+        println!("Job: {:?} - running", job);
     }
 
     async fn update_db(&self, job: &EscalonJob) {
@@ -66,8 +67,11 @@ async fn main() {
     // config
 
     // start service
-    let jm = EscalonJobsManager::<Client>::new();
-    let jm = jm.set_id(iden).set_addr(addr).set_port(port).build(Client::new()).await;
+    // let jm = EscalonJobsManager::new(Context(Client::new()));
+    // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build(Some(Client::new())).await;
+    //
+    let jm = EscalonJobsManager::new(Context(None));
+    let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
 
     jm.init().await;
     // end service

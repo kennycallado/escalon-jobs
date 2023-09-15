@@ -2,6 +2,7 @@ pub mod manager;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
+use manager::Context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -28,7 +29,7 @@ pub struct EscalonJob {
 /// that will be used in the job
 #[async_trait]
 pub trait EscalonJobTrait<T> {
-    async fn run(&self, ctx: T, job: EscalonJob);
+    async fn run(&self, job: EscalonJob, ctx: Context<T>);
     async fn update_db(&self, job: &EscalonJob);
 }
 
