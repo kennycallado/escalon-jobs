@@ -1,9 +1,9 @@
 use escalon::Escalon;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
-use tokio_cron_scheduler::{Job, JobScheduler};
+use tokio_cron_scheduler::JobScheduler;
 
-use crate::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
+use crate::EscalonJob;
 
 #[derive(Clone)]
 pub struct Id(String);
