@@ -19,7 +19,7 @@ path = "examples/base.rs"
 [dependencies]
 async-trait = "0.1.73"
 chrono = { version = "0.4.29", features = ["serde"] }
-escalon = "0.1.4"
+escalon = "0.1.5"
 serde = { version = "1.0.188", features = ["derive"] }
 tokio-cron-scheduler = "*"
 uuid = { version = "1.4.1", features = ["serde"] }
