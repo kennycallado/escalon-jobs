@@ -31,8 +31,8 @@ pub struct EscalonJob {
 /// that will be used in the job
 #[async_trait]
 pub trait EscalonJobTrait<T> {
-    async fn run(&self, job: EscalonJob, ctx: Context<T>) -> EscalonJob;
-    async fn update_db(&self, job: &EscalonJob);
+    async fn run_job(&self, job: EscalonJob, ctx: Context<T>) -> EscalonJob;
+    async fn update_job(&self, job: &EscalonJob);
 }
 
 #[derive(Debug, Clone)]

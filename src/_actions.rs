@@ -50,7 +50,7 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 }
 
                 self.update_status(uuid, EscalonJobStatus::Running);
-                new_cron_job.update_db(&self.get_job(uuid).await).await;
+                new_cron_job.update_job(&self.get_job(uuid).await).await;
             }
             EscalonJobStatus::Running => {
                 let job = self
@@ -62,23 +62,23 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                     .unwrap()
                     .clone();
 
-                let es_job = new_cron_job.run(job.clone(), self.context.clone()).await;
+                let es_job = new_cron_job.run_job(job.clone(), self.context.clone()).await;
 
                 if es_job != job {
                     self.update_status(uuid, es_job.status.to_owned());
-                    new_cron_job.update_db(&es_job).await;
+                    new_cron_job.update_job(&es_job).await;
                 }
             }
             EscalonJobStatus::Done | EscalonJobStatus::Failed => {
                 lock.remove(&uuid).await.unwrap();
-                new_cron_job.update_db(&self.get_job(uuid).await).await;
+                new_cron_job.update_job(&self.get_job(uuid).await).await;
             }
         }
 
         if let Some(until) = new_job.until {
             if until < next_tick {
                 self.update_status(uuid, EscalonJobStatus::Done);
-                new_cron_job.update_db(&self.get_job(uuid).await).await;
+                new_cron_job.update_job(&self.get_job(uuid).await).await;
             }
         }
     }

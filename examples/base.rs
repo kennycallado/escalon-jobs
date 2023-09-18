@@ -36,7 +36,7 @@ impl From<NewAppJob> for NewEscalonJob {
 
 #[async_trait]
 impl EscalonJobTrait<Client> for NewAppJob {
-    async fn run(&self, mut job: EscalonJob, ctx: Context<Client>) -> EscalonJob {
+    async fn run_job(&self, mut job: EscalonJob, ctx: Context<Client>) -> EscalonJob {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
         let req = ctx.0.get(url).send().await.unwrap();
 
@@ -52,7 +52,7 @@ impl EscalonJobTrait<Client> for NewAppJob {
         job
     }
 
-    async fn update_db(&self, job: &EscalonJob) {
+    async fn update_job(&self, job: &EscalonJob) {
         tokio::time::sleep(Duration::from_secs(1)).await;
         println!("Job: {:?} - updating to db", job);
     }
