@@ -101,10 +101,10 @@ impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
             .set_port(self.port.0)
-            .set_count(move || { jobs.lock().unwrap().len() })
+            .set_count_jobs(move || { jobs.lock().unwrap().len() })
+            .set_take_jobs(move |from, start_at, n_jobs| {})
             .build()
-            .await
-            .unwrap();
+            .await;
 
         {
             let scheduler = self.scheduler.lock().unwrap().clone();
