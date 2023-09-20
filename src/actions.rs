@@ -1,9 +1,9 @@
 use uuid::Uuid;
 
-use crate::manager::EscalonJobsManager;
+use crate::manager::{EscalonJobsManager, ContextTrait};
 use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
 
-impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
+impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     pub async fn get_job(&self, id: Uuid) -> EscalonJob {
         self.jobs.lock().unwrap().iter().find(|j| j.job_id == id).unwrap().clone()
     }

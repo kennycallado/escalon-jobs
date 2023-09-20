@@ -1,12 +1,34 @@
-use std::{net::IpAddr, time::Duration};
+use std::net::IpAddr;
+
+use escalon::tokio as tokio;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::manager::{Context, EscalonJobsManager};
-use escalon_jobs::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
+use escalon_jobs::manager::{EscalonJobsManager, ContextTrait};
+use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, EscalonJobStatus};
 use rand::Rng;
 use reqwest::Client;
 use tokio::signal::unix::{signal, SignalKind};
+
+#[derive(Debug, Clone)]
+pub struct Context<T>(pub T);
+impl Context<Client> {
+    pub fn new() -> Self {
+        Context(Client::new())
+    }
+}
+
+impl ContextTrait<Context<Client>> for Context<Client> {
+    fn update_job(&self, _job: &EscalonJob, Context(_ctx): &Context<Client>) {
+        let _ = _ctx.get("https://httpbin.org/status/200");
+
+        println!("Job: {:?} - updating to db", _job);
+    }
+
+    fn take_jobs(&self, _from: &str, _start_at: usize, _n_jobs: usize) {
+        // println!("Take jobs from: {} start_at: {} - n_jobs: {}", from, start_at, n_jobs);
+    }
+}
 
 pub struct AppJob {
     pub id: usize,
@@ -35,13 +57,15 @@ impl From<NewAppJob> for NewEscalonJob {
 }
 
 #[async_trait]
-impl EscalonJobTrait<Client> for NewAppJob {
-    async fn run_job(&self, mut job: EscalonJob, ctx: Context<Client>) -> EscalonJob {
+impl EscalonJobTrait<Context<Client>> for NewAppJob {
+    async fn run_job(&self, mut job: EscalonJob, Context(ctx): Context<Client>) -> EscalonJob {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
-        let req = ctx.0.get(url).send().await.unwrap();
+        let req = ctx.get(url).send().await.unwrap();
 
         match req.status() {
-            reqwest::StatusCode::OK => println!("{} - Status: OK", job.job_id),
+            reqwest::StatusCode::OK => {
+                println!("{} - Status: OK", job.job_id)
+            },
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
 
@@ -50,11 +74,6 @@ impl EscalonJobTrait<Client> for NewAppJob {
         }
 
         job
-    }
-
-    async fn update_job(&self, job: &EscalonJob) {
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        println!("Job: {:?} - updating to db", job);
     }
 }
 
@@ -67,8 +86,10 @@ async fn main() {
     let iden = std::env::var("HOSTNAME").unwrap_or("server".to_string());
     // config
 
+    let context = Context(Client::new());
+
     // start service
-    let jm = EscalonJobsManager::new(Context(Client::new()));
+    let jm = EscalonJobsManager::new(context);
     let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
     //
     // let jm = EscalonJobsManager::new(Context(None));

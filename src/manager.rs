@@ -18,7 +18,12 @@ pub struct Port(u16);
 pub struct NoPort;
 
 #[derive(Clone)]
-pub struct Context<T>(pub T);
+pub struct Context<T: ContextTrait<T>>(pub T);
+
+pub trait ContextTrait<T> {
+    fn update_job(&self, job: &EscalonJob, ctx: &T);
+    fn take_jobs(&self, from: &str, start_at: usize, n_jobs: usize);
+}
 
 pub struct EscalonJobsManagerBuilder<I, A, P, C> {
     id: I,
@@ -56,7 +61,7 @@ impl<I, A, P, C> EscalonJobsManagerBuilder<I, A, P, C> {
     }
 }
 
-impl<C> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>> {
+impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>> {
     pub async fn build(self) -> EscalonJobsManager<C> {
         let jobs = Arc::new(Mutex::new(Vec::new()));
         let scheduler = JobScheduler::new().await.unwrap();
@@ -73,7 +78,7 @@ impl<C> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>> {
 }
 
 #[derive(Clone)]
-pub struct EscalonJobsManager<T> {
+pub struct EscalonJobsManager<T: ContextTrait<T>> {
     pub scheduler: Arc<Mutex<JobScheduler>>,
     pub jobs: Arc<Mutex<Vec<EscalonJob>>>,
     pub context: Context<T>,
@@ -82,27 +87,29 @@ pub struct EscalonJobsManager<T> {
     port: Port,
 }
 
-impl<T: Clone + Send + Sync + 'static> EscalonJobsManager<T> {
+impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
     pub fn new(
-        context: Context<T>,
+        context: T,
     ) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Context<T>> {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
             port: NoPort,
-            context,
+            context: Context(context),
         }
     }
 
     pub async fn init(&self) {
-        let jobs = self.jobs.clone();
+        let jobs_one = self.jobs.clone();
+        let context = self.context.clone();
+
         let mut udp_server = Escalon::new()
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
             .set_port(self.port.0)
-            .set_count_jobs(move || { jobs.lock().unwrap().len() })
-            .set_take_jobs(move |from, start_at, n_jobs| {})
+            .set_count_jobs(move || { jobs_one.lock().unwrap().len() })
+            .set_take_jobs(move |from, start_at, n_jobs| { context.0.take_jobs(from, start_at, n_jobs) })
             .build()
             .await;
 
