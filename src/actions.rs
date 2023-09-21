@@ -1,4 +1,5 @@
 use uuid::Uuid;
+use escalon::tokio as tokio;
 
 use crate::manager::{EscalonJobsManager, ContextTrait};
 use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
@@ -32,14 +33,29 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         es_job
     }
 
-    pub async fn remove_job(&self, id: Uuid) {
-        let scheduler;
-        {
-            scheduler = self.scheduler.lock().unwrap().clone();
-        }
-        scheduler.remove(&id).await.unwrap();
+    pub fn remove_job(&self, id: Uuid) {
+        let manager = self.clone();
+        // let jobs = self.jobs.clone();
+        // let scheduler = self.scheduler.clone();
 
-        self.jobs.lock().unwrap().retain(|j| j.job_id != id);
+        tokio::task::spawn(async move {
+            let scheduler;
+            {
+                scheduler = manager.scheduler.lock().unwrap().clone();
+            }
+            scheduler.remove(&id).await.unwrap();
+
+            manager.jobs.lock().unwrap().retain(|j| j.job_id != id)
+        });
+        // self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
+
+        // let scheduler;
+        // {
+        //     scheduler = self.scheduler.lock().unwrap().clone();
+        // }
+        // scheduler.remove(&id).await.unwrap();
+
+        // self.jobs.lock().unwrap().retain(|j| j.job_id != id);
     }
 
     pub async fn update_job(

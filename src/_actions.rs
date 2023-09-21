@@ -42,6 +42,9 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         let status =
             self.jobs.lock().unwrap().iter().find(|j| j.job_id == uuid).unwrap().status.clone();
 
+        // let n_jobs = self.jobs.lock().unwrap().len();
+        // println!("n_jobs: {}", n_jobs);
+
         match status {
             EscalonJobStatus::Scheduled => {
                 if let Some(since) = new_job.since {
@@ -51,38 +54,60 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 }
 
                 self.update_status(uuid, EscalonJobStatus::Running);
-                self.context.0.update_job(&self.get_job(uuid).await, &self.context.0);
+                self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
             }
             EscalonJobStatus::Running => {
-                // let job = self.get_job(uuid).await;
-                // let es_job = new_cron_job.run_job(job.clone(), self.context.0.clone()).await;
-
-                // if es_job != job {
-                //     self.update_status(uuid, es_job.status.to_owned());
-                //     self.context.0.update_job(&self.get_job(uuid).await, &self.context.0);
-                // }
-
                 let manager = self.clone();
+
                 tokio::task::spawn(async move {
                     let job = manager.get_job(uuid).await;
-                    let es_job = new_cron_job.run_job(job.clone(), manager.context.0.clone()).await;
+                    // TODO
+                    let es_job = new_cron_job.run_job(manager.context.0.clone(), job.clone()).await;
 
                     if es_job != job {
                         manager.update_status(uuid, es_job.status.to_owned());
-                        manager.context.0.update_job(&manager.get_job(uuid).await, &manager.context.0);
+                        manager.context.0.update_job(&manager.context.0, manager.get_job(uuid).await).await;
                     }
                 });
             }
             EscalonJobStatus::Done | EscalonJobStatus::Failed => {
-                lock.remove(&uuid).await.unwrap();
-                self.context.0.update_job(&self.get_job(uuid).await, &self.context.0);
+
+                //
+                // let manager = self.clone();
+                // let id = uuid;
+                // tokio::task::spawn(async move {
+                //     let scheduler;
+                //     {
+                //         scheduler = manager.scheduler.lock().unwrap().clone();
+                //     }
+                //     scheduler.remove(&id).await.unwrap();
+
+                //     manager.jobs.lock().unwrap().retain(|j| j.job_id != id)
+                // });
+                //
+
+                //
+                self.remove_job(uuid);
+                //
+
+                // 
+                // let scheduler;
+                // {
+                //     scheduler = self.scheduler.lock().unwrap().clone();
+                // }
+                // scheduler.remove(&uuid).await.unwrap();
+
+                // self.jobs.lock().unwrap().retain(|j| j.job_id != uuid);
+                // 
+                
+                self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
             }
         }
 
         if let Some(until) = new_job.until {
             if until < next_tick {
                 self.update_status(uuid, EscalonJobStatus::Done);
-                self.context.0.update_job(&self.get_job(uuid).await, &self.context.0);
+                self.context.0.update_job(&self.context.0 ,self.get_job(uuid).await).await;
             }
         }
     }

@@ -18,15 +18,14 @@ impl Context<Client> {
     }
 }
 
+#[async_trait]
 impl ContextTrait<Context<Client>> for Context<Client> {
-    fn update_job(&self, _job: &EscalonJob, Context(_ctx): &Context<Client>) {
-        let _ = _ctx.get("https://httpbin.org/status/200");
-
-        println!("Job: {:?} - updating to db", _job);
+    async fn update_job(&self, Context(_ctx): &Context<Client>, _job: EscalonJob) {
+        // println!("Job: {:?} - updating to db", job);
     }
 
-    fn take_jobs(&self, _from: &str, _start_at: usize, _n_jobs: usize) {
-        // println!("Take jobs from: {} start_at: {} - n_jobs: {}", from, start_at, n_jobs);
+    async fn take_jobs(&self, _ctx: &Context<Client> , from: String, start_at: usize, n_jobs: usize) {
+        println!("Take jobs from: {} start_at: {} - n_jobs: {}", from, start_at, n_jobs);
     }
 }
 
@@ -58,13 +57,13 @@ impl From<NewAppJob> for NewEscalonJob {
 
 #[async_trait]
 impl EscalonJobTrait<Context<Client>> for NewAppJob {
-    async fn run_job(&self, mut job: EscalonJob, Context(ctx): Context<Client>) -> EscalonJob {
+    async fn run_job(&self, Context(ctx): Context<Client>, mut job: EscalonJob) -> EscalonJob {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
         let req = ctx.get(url).send().await.unwrap();
 
         match req.status() {
             reqwest::StatusCode::OK => {
-                println!("{} - Status: OK", job.job_id)
+                // println!("{} - Status: OK", job.job_id)
             },
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
@@ -91,7 +90,7 @@ async fn main() {
     // start service
     let jm = EscalonJobsManager::new(context);
     let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
-    //
+
     // let jm = EscalonJobsManager::new(Context(None));
     // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
 

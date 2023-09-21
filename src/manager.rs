@@ -1,4 +1,5 @@
 use escalon::Escalon;
+use async_trait::async_trait;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use tokio_cron_scheduler::JobScheduler;
@@ -20,9 +21,10 @@ pub struct NoPort;
 #[derive(Clone)]
 pub struct Context<T: ContextTrait<T>>(pub T);
 
+#[async_trait]
 pub trait ContextTrait<T> {
-    fn update_job(&self, job: &EscalonJob, ctx: &T);
-    fn take_jobs(&self, from: &str, start_at: usize, n_jobs: usize);
+    async fn update_job(&self, ctx: &T, job: EscalonJob);
+    async fn take_jobs(&self, ctx: &T, from: String, start_at: usize, n_jobs: usize);
 }
 
 pub struct EscalonJobsManagerBuilder<I, A, P, C> {
@@ -100,16 +102,29 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         }
     }
 
-    pub async fn init(&self) {
-        let jobs_one = self.jobs.clone();
+    fn spawn_take_jobs(&self, from: String, start_at: usize, n_jobs: usize) {
         let context = self.context.clone();
+
+        escalon::tokio::spawn(async move {
+            // TODO
+            context.0.take_jobs(&context.0, from, start_at, n_jobs).await
+            // self.context.0.take_jobs(from, start_at, n_jobs).await;
+
+        });
+    }
+
+    pub async fn init(&self) {
+
+        let jobs_one = self.jobs.clone();
+        let manager = self.clone();
 
         let mut udp_server = Escalon::new()
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
             .set_port(self.port.0)
             .set_count_jobs(move || { jobs_one.lock().unwrap().len() })
-            .set_take_jobs(move |from, start_at, n_jobs| { context.0.take_jobs(from, start_at, n_jobs) })
+            .set_take_jobs(move |from, start_at, n_jobs| { manager.spawn_take_jobs(from.to_string(), start_at, n_jobs); })
+            // .set_take_jobs(move |from, start_at, n_jobs| { context.0.take_jobs(from, start_at, n_jobs); })
             .build()
             .await;
 
