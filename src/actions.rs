@@ -43,9 +43,10 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             {
                 scheduler = manager.scheduler.lock().unwrap().clone();
             }
-            scheduler.remove(&id).await.unwrap();
-
-            manager.jobs.lock().unwrap().retain(|j| j.job_id != id)
+            match scheduler.remove(&id).await {
+                Ok(_) => manager.jobs.lock().unwrap().retain(|j| j.job_id != id) ,
+                Err(e) => println!("Error removing job: {}", e),
+            }
         });
         // self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
 
