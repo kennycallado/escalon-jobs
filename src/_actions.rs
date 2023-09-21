@@ -53,20 +53,27 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                     }
                 }
 
-                self.update_status(uuid, EscalonJobStatus::Running);
-                self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
+                if let Some(job) = self.get_job(uuid).await {
+                    self.update_status(uuid, EscalonJobStatus::Running);
+                    self.context.0.update_job(&self.context.0, job).await;
+                }
             }
             EscalonJobStatus::Running => {
                 let manager = self.clone();
 
                 tokio::task::spawn(async move {
                     let job = manager.get_job(uuid).await;
-                    // TODO
-                    let es_job = new_cron_job.run_job(manager.context.0.clone(), job.clone()).await;
-
-                    if es_job != job {
-                        manager.update_status(uuid, es_job.status.to_owned());
-                        manager.context.0.update_job(&manager.context.0, manager.get_job(uuid).await).await;
+                    match job {
+                        Some(job) => {
+                            let es_job = new_cron_job.run_job(manager.context.0.clone(), job.clone()).await;
+                            if es_job != job {
+                                if let Some(job) = manager.get_job(uuid).await {
+                                    manager.update_status(uuid, es_job.status.to_owned());
+                                    manager.context.0.update_job(&manager.context.0, job).await;
+                                }
+                            }
+                        },
+                        None => {},
                     }
                 });
             }
@@ -100,14 +107,18 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 // self.jobs.lock().unwrap().retain(|j| j.job_id != uuid);
                 // 
                 
-                self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
+                if let Some(job) = self.get_job(uuid).await {
+                    self.context.0.update_job(&self.context.0, job).await;
+                }
             }
         }
 
         if let Some(until) = new_job.until {
             if until < next_tick {
-                self.update_status(uuid, EscalonJobStatus::Done);
-                self.context.0.update_job(&self.context.0 ,self.get_job(uuid).await).await;
+                if let Some(job) = self.get_job(uuid).await {
+                    self.update_status(uuid, EscalonJobStatus::Done);
+                    self.context.0.update_job(&self.context.0, job).await;
+                }
             }
         }
     }

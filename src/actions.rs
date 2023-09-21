@@ -5,8 +5,8 @@ use crate::manager::{EscalonJobsManager, ContextTrait};
 use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
 
 impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
-    pub async fn get_job(&self, id: Uuid) -> EscalonJob {
-        self.jobs.lock().unwrap().iter().find(|j| j.job_id == id).unwrap().clone()
+    pub async fn get_job(&self, id: Uuid) -> Option<EscalonJob> {
+        self.jobs.lock().unwrap().iter().find(|j| j.job_id == id).cloned()
     }
 
     pub async fn get_jobs(&self) -> Vec<EscalonJob> {
