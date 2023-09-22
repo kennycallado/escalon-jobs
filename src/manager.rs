@@ -1,5 +1,5 @@
-use escalon::Escalon;
 use async_trait::async_trait;
+use escalon::Escalon;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use tokio_cron_scheduler::JobScheduler;
@@ -21,10 +21,11 @@ pub struct NoPort;
 #[derive(Clone)]
 pub struct Context<T: ContextTrait<T>>(pub T);
 
+
 #[async_trait]
-pub trait ContextTrait<T> {
-    async fn update_job(&self, ctx: &T, job: EscalonJob);
-    async fn take_jobs(&self, ctx: &T, from: String, start_at: usize, n_jobs: usize);
+pub trait ContextTrait<T: ContextTrait<T>> {
+    async fn update_job(&self, context: &T, job: EscalonJob);
+    async fn take_jobs(&self, manager: &EscalonJobsManager<T>, from: String, start_at: usize, n_jobs: usize);
 }
 
 pub struct EscalonJobsManagerBuilder<I, A, P, C> {
@@ -91,30 +92,29 @@ pub struct EscalonJobsManager<T: ContextTrait<T>> {
 
 impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(
-        context: T,
-    ) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Context<T>> {
+    pub fn new(context: T) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Context<T>> {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
             port: NoPort,
             context: Context(context),
         }
-    }
+}
 
     fn spawn_take_jobs(&self, from: String, start_at: usize, n_jobs: usize) {
-        let context = self.context.clone();
+        let manager = self.clone();
 
         escalon::tokio::spawn(async move {
             // TODO
-            context.0.take_jobs(&context.0, from, start_at, n_jobs).await
-            // self.context.0.take_jobs(from, start_at, n_jobs).await;
+            // let news = manager.context.0.take_jobs(&manager.context.0, from, start_at, n_jobs, |new| { manager.add_job(new); }).await;
 
+            manager.context.0.take_jobs(&manager, from, start_at, n_jobs).await
+
+            // self.context.0.take_jobs(from, start_at, n_jobs).await;
         });
     }
 
     pub async fn init(&self) {
-
         let jobs_one = self.jobs.clone();
         let manager = self.clone();
 
@@ -122,8 +122,10 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
             .set_port(self.port.0)
-            .set_count_jobs(move || { jobs_one.lock().unwrap().len() })
-            .set_take_jobs(move |from, start_at, n_jobs| { manager.spawn_take_jobs(from.to_string(), start_at, n_jobs); })
+            .set_count_jobs(move || jobs_one.lock().unwrap().len())
+            .set_take_jobs(move |from, start_at, n_jobs| {
+                manager.spawn_take_jobs(from.to_string(), start_at, n_jobs);
+            })
             // .set_take_jobs(move |from, start_at, n_jobs| { context.0.take_jobs(from, start_at, n_jobs); })
             .build()
             .await;

@@ -1,11 +1,12 @@
 use std::net::IpAddr;
+use std::time::Duration;
 
-use escalon::tokio as tokio;
+use escalon::tokio;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::manager::{EscalonJobsManager, ContextTrait};
-use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, EscalonJobStatus};
+use escalon_jobs::manager::{ContextTrait, EscalonJobsManager};
+use escalon_jobs::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 use rand::Rng;
 use reqwest::Client;
 use tokio::signal::unix::{signal, SignalKind};
@@ -20,11 +21,18 @@ impl Context<Client> {
 
 #[async_trait]
 impl ContextTrait<Context<Client>> for Context<Client> {
-    async fn update_job(&self, Context(_ctx): &Context<Client>, _job: EscalonJob) {
+    // async fn update_job(&self, Context(_ctx): &Context<Client>, _job: EscalonJob) {
+    async fn update_job(&self, context: &Context<Client>, job: EscalonJob) {
         // println!("Job: {:?} - updating to db", job);
     }
 
-    async fn take_jobs(&self, _ctx: &Context<Client> , from: String, start_at: usize, n_jobs: usize) {
+    async fn take_jobs(
+        &self,
+        _manager: &EscalonJobsManager<Context<Client>>,
+        from: String,
+        start_at: usize,
+        n_jobs: usize,
+    ) {
         println!("Take jobs from: {} start_at: {} - n_jobs: {}", from, start_at, n_jobs);
     }
 }
@@ -64,7 +72,7 @@ impl EscalonJobTrait<Context<Client>> for NewAppJob {
         match req.status() {
             reqwest::StatusCode::OK => {
                 // println!("{} - Status: OK", job.job_id)
-            },
+            }
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
 
@@ -85,7 +93,7 @@ async fn main() {
     let iden = std::env::var("HOSTNAME").unwrap_or("server".to_string());
     // config
 
-    let context = Context(Client::new());
+    let context = Context(Client::builder().timeout(Duration::from_secs(5)).build().unwrap());
 
     // start service
     let jm = EscalonJobsManager::new(context);

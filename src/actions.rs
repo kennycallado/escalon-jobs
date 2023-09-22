@@ -1,7 +1,7 @@
+use escalon::tokio;
 use uuid::Uuid;
-use escalon::tokio as tokio;
 
-use crate::manager::{EscalonJobsManager, ContextTrait};
+use crate::manager::{ContextTrait, EscalonJobsManager};
 use crate::{EscalonJob, EscalonJobTrait, NewEscalonJob};
 
 impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
@@ -44,7 +44,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 scheduler = manager.scheduler.lock().unwrap().clone();
             }
             match scheduler.remove(&id).await {
-                Ok(_) => manager.jobs.lock().unwrap().retain(|j| j.job_id != id) ,
+                Ok(_) => manager.jobs.lock().unwrap().retain(|j| j.job_id != id),
                 Err(e) => println!("Error removing job: {}", e),
             }
         });

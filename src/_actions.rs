@@ -1,8 +1,8 @@
-use escalon::tokio as tokio;
+use escalon::tokio;
 use tokio_cron_scheduler::{Job, JobScheduler};
 use uuid::Uuid;
 
-use crate::manager::{EscalonJobsManager, ContextTrait};
+use crate::manager::{ContextTrait, EscalonJobsManager};
 use crate::{EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 
 impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
@@ -65,20 +65,21 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                     let job = manager.get_job(uuid).await;
                     match job {
                         Some(job) => {
-                            let es_job = new_cron_job.run_job(manager.context.0.clone(), job.clone()).await;
+                            let es_job = new_cron_job
+                                .run_job(manager.context.0.clone(), job.clone())
+                                .await;
                             if es_job != job {
                                 if let Some(job) = manager.get_job(uuid).await {
                                     manager.update_status(uuid, es_job.status.to_owned());
                                     manager.context.0.update_job(&manager.context.0, job).await;
                                 }
                             }
-                        },
-                        None => {},
+                        }
+                        None => {}
                     }
                 });
             }
             EscalonJobStatus::Done | EscalonJobStatus::Failed => {
-
                 //
                 // let manager = self.clone();
                 // let id = uuid;
@@ -97,7 +98,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 self.remove_job(uuid);
                 //
 
-                // 
+                //
                 // let scheduler;
                 // {
                 //     scheduler = self.scheduler.lock().unwrap().clone();
@@ -105,8 +106,8 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 // scheduler.remove(&uuid).await.unwrap();
 
                 // self.jobs.lock().unwrap().retain(|j| j.job_id != uuid);
-                // 
-                
+                //
+
                 if let Some(job) = self.get_job(uuid).await {
                     self.context.0.update_job(&self.context.0, job).await;
                 }
