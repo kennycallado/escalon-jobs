@@ -1,5 +1,5 @@
-use escalon::{Escalon, EscalonTrait};
 use async_trait::async_trait;
+use escalon::{Escalon, EscalonTrait};
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use tokio_cron_scheduler::JobScheduler;
@@ -68,7 +68,10 @@ impl<I, A, P, C, F> EscalonJobsManagerBuilder<I, A, P, C, F> {
         }
     }
 
-    pub fn set_functions<T: ContextTrait<T>>(self, functions: impl EscalonJobsManagerTrait<T> + Send + Sync + 'static) -> EscalonJobsManagerBuilder<I, A, P, C, Functions<T>> {
+    pub fn set_functions<T: ContextTrait<T>>(
+        self,
+        functions: impl EscalonJobsManagerTrait<T> + Send + Sync + 'static,
+    ) -> EscalonJobsManagerBuilder<I, A, P, C, Functions<T>> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: self.addr,
@@ -109,16 +112,33 @@ pub struct EscalonJobsManager<T: ContextTrait<T>> {
 
 #[async_trait]
 pub trait EscalonJobsManagerTrait<T: ContextTrait<T>>: Send + Sync + 'static {
-    async fn take_jobs(&self, manager: &EscalonJobsManager<T>, from_client: String, start_at: usize, n_jobs: usize) -> Result<Vec<String>, ()>;
-    async fn drop_jobs(&self, manager: &EscalonJobsManager<T>, jobs: Vec<String>) -> Result<(), ()>;
+    async fn take_jobs(
+        &self,
+        manager: &EscalonJobsManager<T>,
+        from_client: String,
+        start_at: usize,
+        n_jobs: usize,
+    ) -> Result<Vec<String>, ()>;
+    async fn drop_jobs(
+        &self,
+        manager: &EscalonJobsManager<T>,
+        jobs: Vec<String>,
+    ) -> Result<(), ()>;
 }
 
 #[async_trait]
-impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonTrait for EscalonJobsManager<T> {
+impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonTrait
+    for EscalonJobsManager<T>
+{
     fn count(&self) -> usize {
         self.jobs.lock().unwrap().len()
     }
-    async fn take_jobs(&self, from_client: String, start_at: usize, n_jobs: usize) -> Result<Vec<String>, ()> {
+    async fn take_jobs(
+        &self,
+        from_client: String,
+        start_at: usize,
+        n_jobs: usize,
+    ) -> Result<Vec<String>, ()> {
         self.functions.take_jobs(self, from_client, start_at, n_jobs).await
     }
 
@@ -141,20 +161,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         }
     }
 
-    fn spawn_take_jobs(&self, from: String, start_at: usize, n_jobs: usize) {
-        let context = self.context.clone();
-
-        escalon::tokio::spawn(async move {
-            // TODO
-            // context.0.take_jobs(&context.0, from, start_at, n_jobs).await
-            // self.context.0.take_jobs(from, start_at, n_jobs).await;
-
-        });
-    }
-
     pub async fn init(&self) {
-
-        let jobs_one = self.jobs.clone();
         let manager = self.clone();
 
         let mut udp_server = Escalon::new()

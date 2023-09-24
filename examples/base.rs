@@ -1,11 +1,11 @@
 use std::net::IpAddr;
 
-use escalon::tokio as tokio;
+use escalon::tokio;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::manager::{EscalonJobsManager, ContextTrait, EscalonJobsManagerTrait};
-use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, EscalonJobStatus};
+use escalon_jobs::manager::{ContextTrait, EscalonJobsManager, EscalonJobsManagerTrait};
+use escalon_jobs::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 use rand::Rng;
 use reqwest::Client;
 use tokio::signal::unix::{signal, SignalKind};
@@ -33,7 +33,7 @@ impl EscalonJobsManagerTrait<Context<Client>> for Manager {
         _manager: &EscalonJobsManager<Context<Client>>,
         from_client: String,
         start_at: usize,
-        n_jobs: usize
+        n_jobs: usize,
     ) -> Result<Vec<String>, ()> {
         println!("{} - {} - {}", from_client, start_at, n_jobs);
         // access DB
@@ -41,7 +41,11 @@ impl EscalonJobsManagerTrait<Context<Client>> for Manager {
         Ok(Vec::new())
     }
 
-    async fn drop_jobs(&self, manager: &EscalonJobsManager<Context<Client>>, jobs: Vec<String>) -> Result<(), ()> {
+    async fn drop_jobs(
+        &self,
+        manager: &EscalonJobsManager<Context<Client>>,
+        jobs: Vec<String>,
+    ) -> Result<(), ()> {
         println!("Drop jobs: {:?}", jobs);
 
         Ok(())
@@ -83,7 +87,7 @@ impl EscalonJobTrait<Context<Client>> for NewAppJob {
         match req.status() {
             reqwest::StatusCode::OK => {
                 // println!("{} - Status: OK", job.job_id)
-            },
+            }
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
 
@@ -109,12 +113,7 @@ async fn main() {
     let manager = Manager;
     // start service
     let jm = EscalonJobsManager::new(context);
-    let jm = jm
-        .set_id(iden)
-        .set_addr(addr)
-        .set_port(port)
-        .set_functions(manager)
-        .build().await;
+    let jm = jm.set_id(iden).set_addr(addr).set_port(port).set_functions(manager).build().await;
 
     // let jm = EscalonJobsManager::new(Context(None));
     // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
