@@ -33,21 +33,17 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         es_job
     }
 
-    pub fn remove_job(&self, id: Uuid) {
-        let manager = self.clone();
+    pub async fn remove_job(&self, id: Uuid) {
         // let jobs = self.jobs.clone();
         // let scheduler = self.scheduler.clone();
 
-        tokio::task::spawn(async move {
-            let scheduler;
-            {
-                scheduler = manager.scheduler.lock().unwrap().clone();
-            }
-            match scheduler.remove(&id).await {
-                Ok(_) => manager.jobs.lock().unwrap().retain(|j| j.job_id != id),
-                Err(e) => println!("Error removing job: {}", e),
-            }
-        });
+        // TODO: revisar si es OK
+        let result = self.scheduler.lock().unwrap().remove(&id).await;
+        match result {
+            Ok(_) => self.jobs.lock().unwrap().retain(|j| j.job_id != id),
+            Err(e) => println!("Error removing job: {}", e),
+        }
+
         // self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
 
         // let scheduler;
