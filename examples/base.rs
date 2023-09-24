@@ -4,7 +4,7 @@ use escalon::tokio as tokio;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use escalon_jobs::manager::{EscalonJobsManager, ContextTrait};
+use escalon_jobs::manager::{EscalonJobsManager, ContextTrait, EscalonJobsManagerTrait};
 use escalon_jobs::{EscalonJob, EscalonJobTrait, NewEscalonJob, EscalonJobStatus};
 use rand::Rng;
 use reqwest::Client;
@@ -23,9 +23,28 @@ impl ContextTrait<Context<Client>> for Context<Client> {
     async fn update_job(&self, Context(_ctx): &Context<Client>, _job: EscalonJob) {
         // println!("Job: {:?} - updating to db", job);
     }
+}
 
-    async fn take_jobs(&self, _ctx: &Context<Client> , from: String, start_at: usize, n_jobs: usize) {
-        println!("Take jobs from: {} start_at: {} - n_jobs: {}", from, start_at, n_jobs);
+pub struct Manager;
+#[async_trait]
+impl EscalonJobsManagerTrait<Context<Client>> for Manager {
+    async fn take_jobs(
+        &self,
+        _manager: &EscalonJobsManager<Context<Client>>,
+        from_client: String,
+        start_at: usize,
+        n_jobs: usize
+    ) -> Result<Vec<String>, ()> {
+        println!("{} - {} - {}", from_client, start_at, n_jobs);
+        // access DB
+
+        Ok(Vec::new())
+    }
+
+    async fn drop_jobs(&self, manager: &EscalonJobsManager<Context<Client>>, jobs: Vec<String>) -> Result<(), ()> {
+        println!("Drop jobs: {:?}", jobs);
+
+        Ok(())
     }
 }
 
@@ -87,9 +106,15 @@ async fn main() {
 
     let context = Context(Client::new());
 
+    let manager = Manager;
     // start service
     let jm = EscalonJobsManager::new(context);
-    let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
+    let jm = jm
+        .set_id(iden)
+        .set_addr(addr)
+        .set_port(port)
+        .set_functions(manager)
+        .build().await;
 
     // let jm = EscalonJobsManager::new(Context(None));
     // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
@@ -98,7 +123,7 @@ async fn main() {
     // end service
 
     // call from handlers
-    for i in 1..=200 {
+    for i in 1..=100 {
         let sec = rand::thread_rng().gen_range(1..6);
         let schedule = format!("0/{} * * * * *", sec);
         // let schedule = "0/5 * * * * *".to_owned();
