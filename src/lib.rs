@@ -27,7 +27,7 @@ pub struct EscalonJob {
 
 #[async_trait]
 pub trait EscalonJobTrait<T> {
-    async fn run_job(&self, ctx: T, mut job: EscalonJob) -> EscalonJob;
+    async fn run_job(&self, ctx: &T, mut job: EscalonJob) -> EscalonJob;
 }
 
 #[derive(Debug, Clone)]

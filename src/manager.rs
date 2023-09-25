@@ -22,7 +22,7 @@ pub struct Functions<T>(pub Arc<dyn EscalonJobsManagerTrait<T>>);
 pub struct NoFunctions;
 
 #[derive(Clone)]
-pub struct Context<T: ContextTrait<T>>(pub T);
+pub struct Context<T>(pub T);
 
 #[async_trait]
 pub trait ContextTrait<T> {
@@ -90,7 +90,7 @@ impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>, F
         EscalonJobsManager {
             scheduler: Arc::new(Mutex::new(scheduler)),
             jobs,
-            context: self.context,
+            context: self.context.0,
             functions: self.functions.0,
             id: self.id,
             addr: self.addr,
@@ -103,7 +103,7 @@ impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>, F
 pub struct EscalonJobsManager<T: ContextTrait<T>> {
     pub scheduler: Arc<Mutex<JobScheduler>>,
     pub jobs: Arc<Mutex<Vec<EscalonJob>>>,
-    pub context: Context<T>,
+    pub context: T,
     pub functions: Arc<dyn EscalonJobsManagerTrait<T>>,
     id: Id,
     addr: Addr,
@@ -133,6 +133,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonTrait
     fn count(&self) -> usize {
         self.jobs.lock().unwrap().len()
     }
+
     async fn take_jobs(
         &self,
         from_client: String,

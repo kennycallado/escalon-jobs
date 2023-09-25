@@ -22,6 +22,8 @@ impl Context<Client> {
 impl ContextTrait<Context<Client>> for Context<Client> {
     async fn update_job(&self, Context(_ctx): &Context<Client>, _job: EscalonJob) {
         // println!("Job: {:?} - updating to db", job);
+        println!("updating to db");
+        escalon::tokio::time::sleep(std::time::Duration::from_secs(3)).await;
     }
 }
 
@@ -43,7 +45,7 @@ impl EscalonJobsManagerTrait<Context<Client>> for Manager {
 
     async fn drop_jobs(
         &self,
-        manager: &EscalonJobsManager<Context<Client>>,
+        _manager: &EscalonJobsManager<Context<Client>>,
         jobs: Vec<String>,
     ) -> Result<(), ()> {
         println!("Drop jobs: {:?}", jobs);
@@ -80,13 +82,13 @@ impl From<NewAppJob> for NewEscalonJob {
 
 #[async_trait]
 impl EscalonJobTrait<Context<Client>> for NewAppJob {
-    async fn run_job(&self, Context(ctx): Context<Client>, mut job: EscalonJob) -> EscalonJob {
+    async fn run_job(&self, Context(ctx): &Context<Client>, mut job: EscalonJob) -> EscalonJob {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
         let req = ctx.get(url).send().await.unwrap();
 
         match req.status() {
             reqwest::StatusCode::OK => {
-                // println!("{} - Status: OK", job.job_id)
+                println!("{} - Status: OK", job.job_id)
             }
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
@@ -137,7 +139,6 @@ async fn main() {
 
         jm.add_job(new_app_job).await;
     }
-    // call from handlers
 
     signal(SignalKind::terminate()).unwrap().recv().await;
     println!("Shutting down the server");
