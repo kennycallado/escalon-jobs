@@ -169,9 +169,6 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             .set_addr(self.addr.0)
             .set_port(self.port.0)
             .set_manager(manager.clone())
-            // .set_count_jobs(move || { jobs_one.lock().unwrap().len() })
-            // .set_take_jobs(move |from, start_at, n_jobs| { manager.spawn_take_jobs(from.to_string(), start_at, n_jobs); })
-            // // .set_take_jobs(move |from, start_at, n_jobs| { context.0.take_jobs(from, start_at, n_jobs); })
             .build()
             .await;
 
@@ -180,6 +177,6 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             scheduler.start().await.unwrap();
         }
 
-        udp_server.listen().await.unwrap()
+        udp_server.listen().await
     }
 }

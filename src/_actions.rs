@@ -63,20 +63,16 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
 
                 tokio::task::spawn(async move {
                     let job = manager.get_job(uuid).await;
-                    match job {
-                        Some(job) => {
-                            let es_job = new_cron_job
-                                .run_job(manager.context.0.clone(), job.clone())
-                                .await;
-                            if es_job != job {
-                                if let Some(job) = manager.get_job(uuid).await {
-                                    manager.update_status(uuid, es_job.status.to_owned());
-                                    manager.context.0.update_job(&manager.context.0, job).await;
-                                }
+                    if let Some(job) = job {
+                        let es_job =
+                            new_cron_job.run_job(manager.context.0.clone(), job.clone()).await;
+                        if es_job != job {
+                            if let Some(job) = manager.get_job(uuid).await {
+                                manager.update_status(uuid, es_job.status.to_owned());
+                                manager.context.0.update_job(&manager.context.0, job).await;
                             }
                         }
-                        None => {}
-                    }
+                    };
                 });
             }
             EscalonJobStatus::Done | EscalonJobStatus::Failed => {
@@ -109,7 +105,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
 
                 if let Some(job) = self.get_job(uuid).await {
                     self.context.0.update_job(&self.context.0, job).await;
-                    self.remove_job(uuid);
+                    self.remove_job(uuid).await;
                 }
             }
         }

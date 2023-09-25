@@ -1,4 +1,3 @@
-use escalon::tokio;
 use uuid::Uuid;
 
 use crate::manager::{ContextTrait, EscalonJobsManager};
