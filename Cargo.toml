@@ -23,7 +23,7 @@ escalon = "0.1.8"
 # escalon = { path = "../escalon/" }
 # escalon = { git = "https://github.com/kennycallado/escalon" }
 serde = { version = "1.0.188", features = ["derive"] }
-tokio-cron-scheduler = "*"
+tokio-cron-scheduler = "0.9.4"
 uuid = { version = "1.4.1", features = ["serde"] }
 
 [dev-dependencies]
