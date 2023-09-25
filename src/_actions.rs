@@ -22,10 +22,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         })
         .unwrap();
 
-        let scheduler;
-        {
-            scheduler = self.scheduler.lock().unwrap().clone();
-        }
+        let scheduler = self.scheduler.lock().unwrap().clone();
         scheduler.add(job).await.unwrap()
     }
 
@@ -104,12 +101,9 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     }
 
     fn update_status(&self, id: Uuid, status: EscalonJobStatus) {
-        let jobs = self.jobs.clone();
+        let mut jobs = self.jobs.lock().unwrap();
 
-        {
-            let mut jobs = jobs.lock().unwrap();
-            let job = jobs.iter_mut().find(|j| j.job_id == id).unwrap();
-            job.status = status;
-        }
+        let job = jobs.iter_mut().find(|j| j.job_id == id).unwrap();
+        job.status = status;
     }
 }

@@ -33,29 +33,12 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     }
 
     pub async fn remove_job(&self, id: Uuid) {
-        // let jobs = self.jobs.clone();
-        // let scheduler = self.scheduler.clone();
-
-        // TODO: revisar si es OK
-        let schedule;
-        {
-            schedule = self.scheduler.lock().unwrap().clone();
-        }
+        let schedule = self.scheduler.lock().unwrap().clone();
 
         match schedule.remove(&id).await {
             Ok(_) => self.jobs.lock().unwrap().retain(|j| j.job_id != id),
             Err(e) => println!("Error removing job: {}", e),
         }
-
-        // self.context.0.update_job(&self.context.0, self.get_job(uuid).await).await;
-
-        // let scheduler;
-        // {
-        //     scheduler = self.scheduler.lock().unwrap().clone();
-        // }
-        // scheduler.remove(&id).await.unwrap();
-
-        // self.jobs.lock().unwrap().retain(|j| j.job_id != id);
     }
 
     pub async fn update_job(
@@ -75,13 +58,12 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         job.since = new_job.since;
         job.until = new_job.until;
 
-        let scheduler;
-        {
-            scheduler = self.scheduler.lock().unwrap().clone();
-        }
-        scheduler.remove(&id).await.unwrap();
-
+        self.remove_job(id).await;
         self.create_job(new_cron_job).await;
+
+        // TODO:
+        // not sure if should be called outside
+        self.context.update_job(&self.context, job.clone()).await;
 
         job.clone()
     }
