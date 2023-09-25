@@ -19,7 +19,7 @@ path = "examples/base.rs"
 [dependencies]
 async-trait = "0.1.73"
 chrono = { version = "0.4.29", features = ["serde"] }
-# escalon = "0.1.6"
+escalon = "0.1.8"
 # escalon = { path = "../escalon/" }
 escalon = { git = "https://github.com/kennycallado/escalon" }
 serde = { version = "1.0.188", features = ["derive"] }
