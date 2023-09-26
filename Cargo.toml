@@ -1,12 +1,17 @@
 [package]
 authors = ["kennycallado <kennycallado@hotmail.com>"]
-description = "Simple way to scale your application with jobs"
+description = "Simple way to scale your jobs application "
 edition = "2021"
 license = "MIT"
 name = "escalon-jobs"
 readme = "README.md"
 repository = "https://github.com/kennycallado/escalon-jobs"
 version = "0.1.0"
+
+[profile.release]
+lto = true
+opt-level = "z"
+strip = true
 
 [lib]
 name = "escalon_jobs"
@@ -18,13 +23,10 @@ path = "examples/base.rs"
 
 [dependencies]
 async-trait = "0.1.73"
-chrono = { version = "0.4.29", features = ["serde"] }
+chrono = { version = "0.4.29" }
 escalon = "0.1.8"
-# escalon = { path = "../escalon/" }
-# escalon = { git = "https://github.com/kennycallado/escalon" }
-serde = { version = "1.0.188", features = ["derive"] }
 tokio-cron-scheduler = "0.9.4"
-uuid = { version = "1.4.1", features = ["serde"] }
+uuid = { version = "1.4.1" }
 
 [dev-dependencies]
 rand = "0.8.5"

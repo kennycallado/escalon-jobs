@@ -1,9 +1,10 @@
+#![allow(dead_code)]
 use std::net::IpAddr;
-
-use escalon::tokio;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
+use escalon::tokio;
 use escalon_jobs::manager::{ContextTrait, EscalonJobsManager, EscalonJobsManagerTrait};
 use escalon_jobs::{EscalonJob, EscalonJobStatus, EscalonJobTrait, NewEscalonJob};
 use rand::Rng;
@@ -82,9 +83,13 @@ impl From<NewAppJob> for NewEscalonJob {
 
 #[async_trait]
 impl EscalonJobTrait<Context<Client>> for NewAppJob {
-    async fn run_job(&self, Context(ctx): &Context<Client>, mut job: EscalonJob) -> EscalonJob {
+    async fn run_job(
+        &self,
+        Context(client): &Context<Client>,
+        mut job: EscalonJob,
+    ) -> EscalonJob {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
-        let req = ctx.get(url).send().await.unwrap();
+        let req = client.get(url).send().await.unwrap();
 
         match req.status() {
             reqwest::StatusCode::OK => {
@@ -110,7 +115,7 @@ async fn main() {
     let iden = std::env::var("HOSTNAME").unwrap_or("server".to_string());
     // config
 
-    let context = Context(Client::new());
+    let context = Context(Client::builder().timeout(Duration::from_secs(5)).build().unwrap());
 
     let manager = Manager;
     // start service

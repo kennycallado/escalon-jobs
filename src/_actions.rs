@@ -69,14 +69,14 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 }
 
                 let manager = self.clone();
-                escalon::tokio::spawn(async move {
+                escalon::tokio::task::spawn(async move {
                     manager.spawn_run_job(uuid, new_cron_job).await;
                 });
                 // self.spawn_run_job(uuid, new_cron_job).await;
             }
             EscalonJobStatus::Running => {
                 let manager = self.clone();
-                escalon::tokio::spawn(async move {
+                escalon::tokio::task::spawn(async move {
                     manager.spawn_run_job(uuid, new_cron_job).await;
                 });
                 // self.spawn_run_job(uuid, new_cron_job).await;
