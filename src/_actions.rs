@@ -35,11 +35,10 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
 
         if let Some(job) = job {
             let es_job = new_cron_job.run_job(&self.context.clone(), job.clone()).await;
+
             if es_job != job {
-                if let Some(job) = self.get_job(job_id).await {
-                    self.update_status(job_id, es_job.status.to_owned());
-                    self.context.update_job(&self.context, job).await;
-                }
+                self.update_status(job_id, es_job.status.to_owned());
+                self.context.update_job(&self.context, es_job).await;
             }
         };
     }
@@ -83,9 +82,9 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                 // self.spawn_run_job(uuid, new_cron_job).await;
             }
             EscalonJobStatus::Done | EscalonJobStatus::Failed => {
+                // This way ensures that the job is in the scheduler and then removes it
                 if let Some(job) = self.get_job(uuid).await {
-                    self.context.update_job(&self.context, job).await;
-                    self.remove_job(uuid).await;
+                    self.remove_job(job.job_id).await;
                 }
             }
         }
