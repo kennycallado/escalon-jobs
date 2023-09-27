@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use escalon::{Escalon, EscalonTrait};
+pub use escalon::EscalonClient;
+use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use tokio_cron_scheduler::JobScheduler;
@@ -95,6 +97,8 @@ impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>, F
             id: self.id,
             addr: self.addr,
             port: self.port,
+            // clients: Arc::new(Mutex::new(HashMap::new())),
+            clients: None,
         }
     }
 }
@@ -105,9 +109,12 @@ pub struct EscalonJobsManager<T: ContextTrait<T>> {
     pub jobs: Arc<Mutex<Vec<EscalonJob>>>,
     pub context: T,
     pub functions: Arc<dyn EscalonJobsManagerTrait<T>>,
+    pub clients: Option<Arc<Mutex<HashMap<String, EscalonClient>>>>,
     id: Id,
     addr: Addr,
     port: Port,
+    // clients: Arc<Mutex<HashMap<String, EscalonClient>>>,
+    // pub clients: Option<Arc<Mutex<HashMap<String, EscalonClient>>>>,
 }
 
 #[async_trait]
@@ -162,7 +169,7 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         }
     }
 
-    pub async fn init(&self) {
+    pub async fn init(&mut self) {
         let manager = self.clone();
 
         let mut udp_server = Escalon::new()
@@ -177,6 +184,8 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
             let scheduler = self.scheduler.lock().unwrap().clone();
             scheduler.start().await.unwrap();
         }
+
+        self.clients = Some(Arc::clone(&udp_server.clients));
 
         udp_server.listen().await
     }
