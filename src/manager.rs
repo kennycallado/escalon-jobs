@@ -97,7 +97,6 @@ impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>, F
             id: self.id,
             addr: self.addr,
             port: self.port,
-            // clients: Arc::new(Mutex::new(HashMap::new())),
             clients: None,
         }
     }
