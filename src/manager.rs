@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use escalon::{Escalon, EscalonTrait};
 pub use escalon::EscalonClient;
+use escalon::{Escalon, EscalonTrait};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};

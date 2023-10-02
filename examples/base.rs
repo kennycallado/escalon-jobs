@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use std::net::IpAddr;
+use std::ops::Add;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -89,11 +90,20 @@ impl EscalonJobTrait<Context<Client>> for NewAppJob {
         mut job: EscalonJob,
     ) -> EscalonJob {
         let url = std::env::var("URL").unwrap_or("https://httpbin.org/status/200".to_string());
-        let req = client.get(url).send().await.unwrap();
+        let req = client.get(url).send().await;
+
+        if let Err(e) = req {
+            println!("{} - Error: {}", job.job_id, e);
+
+            job.status = EscalonJobStatus::Failed;
+            return job;
+        }
+        let req = req.unwrap();
 
         match req.status() {
             reqwest::StatusCode::OK => {
-                println!("{} - Status: OK", job.job_id)
+                println!("{} - Status: OK", job.job_id);
+                println!("{:?} - state", job.status);
             }
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
@@ -120,7 +130,8 @@ async fn main() {
     let manager = Manager;
     // start service
     let jm = EscalonJobsManager::new(context);
-    let mut jm = jm.set_id(iden).set_addr(addr).set_port(port).set_functions(manager).build().await;
+    let mut jm =
+        jm.set_id(iden).set_addr(addr).set_port(port).set_functions(manager).build().await;
 
     // let jm = EscalonJobsManager::new(Context(None));
     // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
@@ -129,17 +140,23 @@ async fn main() {
     // end service
 
     // call from handlers
-    for i in 1..=100 {
+    for i in 1..=10 {
         let sec = rand::thread_rng().gen_range(1..6);
         let schedule = format!("0/{} * * * * *", sec);
         // let schedule = "0/5 * * * * *".to_owned();
+
+        let since = Some(chrono::Utc::now().naive_utc().add(chrono::Duration::seconds(10)));
+        let until = Some(since.unwrap().add(chrono::Duration::seconds(60)));
+
+        // let since = None;
+        // let until = None;
 
         let new_app_job = NewAppJob {
             service: format!("test_{}", i),
             route: "test".to_owned(),
             schedule,
-            since: None,
-            until: None,
+            since,
+            until,
         };
 
         jm.add_job(new_app_job).await;
