@@ -63,6 +63,12 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
                     }
                 }
 
+                if let Some(until) = new_job.until {
+                    if until < next_tick {
+                        return;
+                    }
+                }
+
                 // if let Some(job) = self.get_job(uuid).await {
                 if (self.get_job(uuid).await).is_some() {
                     self.update_status(uuid, EscalonJobStatus::Running).await;
