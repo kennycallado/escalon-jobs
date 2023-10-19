@@ -121,6 +121,7 @@ async fn main() {
     // config
     let addr =
         std::env::var("ADDR").unwrap_or("0.0.0.0".to_string()).parse::<IpAddr>().unwrap();
+    let svc = std::env::var("SERVICE").unwrap_or("255.255.255.255".to_string()).parse::<IpAddr>().unwrap();
     let port = std::env::var("PORT").unwrap_or("65056".to_string()).parse::<u16>().unwrap();
     let iden = std::env::var("HOSTNAME").unwrap_or("server".to_string());
     // config
@@ -131,7 +132,7 @@ async fn main() {
     // start service
     let jm = EscalonJobsManager::new(context);
     let mut jm =
-        jm.set_id(iden).set_addr(addr).set_port(port).set_functions(manager).build().await;
+        jm.set_id(iden).set_addr(addr).set_svc(svc).set_port(port).set_functions(manager).build().await;
 
     // let jm = EscalonJobsManager::new(Context(None));
     // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;
@@ -146,7 +147,7 @@ async fn main() {
         // let schedule = "0/5 * * * * *".to_owned();
 
         let since = Some(chrono::Utc::now().naive_utc().add(chrono::Duration::seconds(10)));
-        let until = Some(since.unwrap().add(chrono::Duration::seconds(60)));
+        let until = Some(since.unwrap().add(chrono::Duration::seconds(0)));
 
         // let since = None;
         // let until = None;
