@@ -116,7 +116,6 @@ impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Service, Port, Cont
             functions: self.functions.0,
             id: self.id,
             addr: self.addr,
-            svc: self.svc,
             port: self.port,
             clients: None,
         }
@@ -132,7 +131,6 @@ pub struct EscalonJobsManager<T: ContextTrait<T>> {
     pub clients: Option<Arc<Mutex<HashMap<String, EscalonClient>>>>,
     id: Id,
     addr: Addr,
-    svc: Service,
     port: Port,
     // clients: Arc<Mutex<HashMap<String, EscalonClient>>>,
     // pub clients: Option<Arc<Mutex<HashMap<String, EscalonClient>>>>,
@@ -197,7 +195,6 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         let mut udp_server = Escalon::new()
             .set_id(&self.id.0)
             .set_addr(self.addr.0)
-            .set_svc(self.svc.0)
             .set_port(self.port.0)
             .set_manager(manager.clone())
             .build()
