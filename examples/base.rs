@@ -22,9 +22,15 @@ impl Context<Client> {
 
 #[async_trait]
 impl ContextTrait<Context<Client>> for Context<Client> {
-    async fn update_job(&self, Context(_ctx): &Context<Client>, _job: EscalonJob) {
-        // println!("Job: {:?} - updating to db", job);
-        println!("updating to db");
+    async fn update_job(&self, Context(_ctx): &Context<Client>, job: EscalonJob) {
+
+        match job.status {
+            EscalonJobStatus::Done => {
+                println!("Job: {} - Done", job.job_id)
+            },
+            _ => println!("updating to db")
+        }
+
         escalon::tokio::time::sleep(std::time::Duration::from_secs(3)).await;
     }
 }
@@ -39,7 +45,7 @@ impl EscalonJobsManagerTrait<Context<Client>> for Manager {
         start_at: usize,
         n_jobs: usize,
     ) -> Result<Vec<String>, ()> {
-        println!("{} - {} - {}", from_client, start_at, n_jobs);
+        println!("{}: {} - {}", from_client, start_at, n_jobs);
         // access DB
 
         Ok(Vec::new())
@@ -102,8 +108,8 @@ impl EscalonJobTrait<Context<Client>> for NewAppJob {
 
         match req.status() {
             reqwest::StatusCode::OK => {
-                println!("{} - Status: OK", job.job_id);
-                println!("{:?} - state", job.status);
+                // println!("{} - Status: OK", job.job_id);
+                // println!("{:?} - state", job.status);
             }
             _ => {
                 println!("{} - Status: {}", job.job_id, req.status());
@@ -150,8 +156,8 @@ async fn main() {
         let schedule = format!("0/{} * * * * *", sec);
         // let schedule = "0/5 * * * * *".to_owned();
 
-        let since = Some(chrono::Utc::now().naive_utc().add(chrono::Duration::seconds(10)));
-        let until = Some(since.unwrap().add(chrono::Duration::seconds(0)));
+        let since = Some(chrono::Utc::now().naive_utc().add(chrono::Duration::seconds(0)));
+        let until = Some(since.unwrap().add(chrono::Duration::seconds(60)));
 
         // let since = None;
         // let until = None;
