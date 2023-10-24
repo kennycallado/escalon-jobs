@@ -121,7 +121,10 @@ async fn main() {
     // config
     let addr =
         std::env::var("ADDR").unwrap_or("0.0.0.0".to_string()).parse::<IpAddr>().unwrap();
-    let svc = std::env::var("SERVICE").unwrap_or("255.255.255.255".to_string()).parse::<IpAddr>().unwrap();
+    let svc = std::env::var("SERVICE")
+        .unwrap_or("255.255.255.255".to_string())
+        .parse::<IpAddr>()
+        .unwrap();
     let port = std::env::var("PORT").unwrap_or("65056".to_string()).parse::<u16>().unwrap();
     let iden = std::env::var("HOSTNAME").unwrap_or("server".to_string());
     // config
@@ -131,8 +134,14 @@ async fn main() {
     let manager = Manager;
     // start service
     let jm = EscalonJobsManager::new(context);
-    let mut jm =
-        jm.set_id(iden).set_addr(addr).set_svc(svc).set_port(port).set_functions(manager).build().await;
+    let mut jm = jm
+        .set_id(iden)
+        .set_addr(addr)
+        .set_svc(svc)
+        .set_port(port)
+        .set_functions(manager)
+        .build()
+        .await;
 
     // let jm = EscalonJobsManager::new(Context(None));
     // let jm = jm.set_id(iden).set_addr(addr).set_port(port).build().await;

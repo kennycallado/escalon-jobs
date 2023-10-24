@@ -104,7 +104,9 @@ impl<I, A, S, P, C, F> EscalonJobsManagerBuilder<I, A, S, P, C, F> {
     }
 }
 
-impl<C: ContextTrait<C>> EscalonJobsManagerBuilder<Id, Addr, Service, Port, Context<C>, Functions<C>> {
+impl<C: ContextTrait<C>>
+    EscalonJobsManagerBuilder<Id, Addr, Service, Port, Context<C>, Functions<C>>
+{
     pub async fn build(self) -> EscalonJobsManager<C> {
         let jobs = Arc::new(Mutex::new(Vec::new()));
         let scheduler = JobScheduler::new().await.unwrap();
@@ -178,7 +180,8 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
     pub fn new(
         context: T,
-    ) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoService, NoPort, Context<T>, NoFunctions> {
+    ) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoService, NoPort, Context<T>, NoFunctions>
+    {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
