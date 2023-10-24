@@ -17,10 +17,6 @@ pub struct Addr(IpAddr);
 pub struct NoAddr;
 
 #[derive(Clone)]
-pub struct Service(IpAddr);
-pub struct NoService;
-
-#[derive(Clone)]
 pub struct Port(u16);
 pub struct NoPort;
 
@@ -35,54 +31,39 @@ pub trait ContextTrait<T> {
     async fn update_job(&self, ctx: &T, job: EscalonJob);
 }
 
-pub struct EscalonJobsManagerBuilder<I, A, S, P, C, F> {
+pub struct EscalonJobsManagerBuilder<I, A, P, C, F> {
     id: I,
     addr: A,
-    svc: S,
     port: P,
     context: C,
     functions: F,
 }
 
-impl<I, A, S, P, C, F> EscalonJobsManagerBuilder<I, A, S, P, C, F> {
-    pub fn set_id(self, id: String) -> EscalonJobsManagerBuilder<Id, A, S, P, C, F> {
+impl<I, A, P, C, F> EscalonJobsManagerBuilder<I, A, P, C, F> {
+    pub fn set_id(self, id: String) -> EscalonJobsManagerBuilder<Id, A, P, C, F> {
         EscalonJobsManagerBuilder {
             id: Id(id),
             addr: self.addr,
-            svc: self.svc,
             port: self.port,
             context: self.context,
             functions: self.functions,
         }
     }
 
-    pub fn set_addr(self, addr: IpAddr) -> EscalonJobsManagerBuilder<I, Addr, S, P, C, F> {
+    pub fn set_addr(self, addr: IpAddr) -> EscalonJobsManagerBuilder<I, Addr, P, C, F> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: Addr(addr),
-            svc: self.svc,
             port: self.port,
             context: self.context,
             functions: self.functions,
         }
     }
 
-    pub fn set_svc(self, svc: IpAddr) -> EscalonJobsManagerBuilder<I, A, Service, P, C, F> {
+    pub fn set_port(self, port: u16) -> EscalonJobsManagerBuilder<I, A, Port, C, F> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: self.addr,
-            svc: Service(svc),
-            port: self.port,
-            context: self.context,
-            functions: self.functions,
-        }
-    }
-
-    pub fn set_port(self, port: u16) -> EscalonJobsManagerBuilder<I, A, S, Port, C, F> {
-        EscalonJobsManagerBuilder {
-            id: self.id,
-            addr: self.addr,
-            svc: self.svc,
             port: Port(port),
             context: self.context,
             functions: self.functions,
@@ -92,11 +73,10 @@ impl<I, A, S, P, C, F> EscalonJobsManagerBuilder<I, A, S, P, C, F> {
     pub fn set_functions<T: ContextTrait<T>>(
         self,
         functions: impl EscalonJobsManagerTrait<T> + Send + Sync + 'static,
-    ) -> EscalonJobsManagerBuilder<I, A, S, P, C, Functions<T>> {
+    ) -> EscalonJobsManagerBuilder<I, A, P, C, Functions<T>> {
         EscalonJobsManagerBuilder {
             id: self.id,
             addr: self.addr,
-            svc: self.svc,
             port: self.port,
             context: self.context,
             functions: Functions(Arc::new(functions)),
@@ -105,7 +85,7 @@ impl<I, A, S, P, C, F> EscalonJobsManagerBuilder<I, A, S, P, C, F> {
 }
 
 impl<C: ContextTrait<C>>
-    EscalonJobsManagerBuilder<Id, Addr, Service, Port, Context<C>, Functions<C>>
+    EscalonJobsManagerBuilder<Id, Addr, Port, Context<C>, Functions<C>>
 {
     pub async fn build(self) -> EscalonJobsManager<C> {
         let jobs = Arc::new(Mutex::new(Vec::new()));
@@ -180,12 +160,11 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
     #[allow(clippy::new_ret_no_self)]
     pub fn new(
         context: T,
-    ) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoService, NoPort, Context<T>, NoFunctions>
+    ) -> EscalonJobsManagerBuilder<NoId, NoAddr, NoPort, Context<T>, NoFunctions>
     {
         EscalonJobsManagerBuilder {
             id: NoId,
             addr: NoAddr,
-            svc: NoService,
             port: NoPort,
             functions: NoFunctions,
             context: Context(context),
