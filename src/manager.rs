@@ -100,6 +100,7 @@ impl<C: ContextTrait<C>>
             addr: self.addr,
             port: self.port,
             clients: None,
+            start_time: None,
         }
     }
 }
@@ -111,6 +112,7 @@ pub struct EscalonJobsManager<T: ContextTrait<T>> {
     pub context: T,
     pub functions: Arc<dyn EscalonJobsManagerTrait<T>>,
     pub clients: Option<Arc<Mutex<HashMap<String, EscalonClient>>>>,
+    pub start_time: Option<std::time::SystemTime>,
     id: Id,
     addr: Addr,
     port: Port,
@@ -188,7 +190,6 @@ impl<T: ContextTrait<T> + Clone + Send + Sync + 'static> EscalonJobsManager<T> {
         }
 
         self.clients = Some(Arc::clone(&udp_server.clients));
-
-        udp_server.listen().await
+        self.start_time = Some(udp_server.listen().await)
     }
 }
